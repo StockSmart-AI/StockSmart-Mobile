@@ -1,23 +1,12 @@
-const accent = "#7ED1A7";
-
 const Colors = {
   accent: "#7ED1A7",
-  light: {
-    text: "#1B2821",
-    background: "#FBFEFC",
-    primary: "#E8F2ED",
-    secondary: "#6C7D6D",
-    tertiary: "#4F5652",
-    icon: accent,
-  },
-  dark: {
-    text: "#FBFEFC",
-    background: "#151A17",
-    primary: "#E8F2ED",
-    secondary: "#6C7D6D",
-    tertiary: "#4F5652",
-    icon: accent,
-  },
+  light: "#FBFEFC",
+  dark: "#151A17",
+  text: "#1B2821",
+  textWhite: "#FBFEFC",
+  primary: "#E8F2ED",
+  secondary: "#6C7D6D",
+  tertiary: "#4F5652",
 };
 
 const Fonts = {

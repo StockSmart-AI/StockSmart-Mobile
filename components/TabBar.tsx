@@ -3,6 +3,7 @@ import { useLinkBuilder } from "@react-navigation/native";
 import { Text, PlatformPressable } from "@react-navigation/elements";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { LayoutGrid, Store, ChartBar, History } from "lucide-react-native";
+import { useTheme } from "@/context/ThemeContext";
 import { Colors, Fonts } from "@/constants/Theme";
 
 export default function TabBar({
@@ -11,9 +12,15 @@ export default function TabBar({
   navigation,
 }: BottomTabBarProps) {
   const { buildHref } = useLinkBuilder();
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.tabStyle}>
+    <View
+      style={[
+        styles.tabStyle,
+        { backgroundColor: theme === "light" ? Colors.light : Colors.dark },
+      ]}
+    >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label =
@@ -104,7 +111,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: Colors.light.background,
     alignItems: "center",
     bottom: 0,
     marginHorizontal: 10,
