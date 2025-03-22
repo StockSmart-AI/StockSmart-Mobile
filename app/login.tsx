@@ -2,10 +2,9 @@ import React, { useContext, useState } from "react";
 import { View, TextInput, Button } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import PublicRoute from "../components/PublicRoute";
-import { Fonts } from "@/constants/Theme";
 
 export default function LoginScreen() {
-  const [email, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useContext(AuthContext);
 
@@ -20,11 +19,7 @@ export default function LoginScreen() {
   return (
     <PublicRoute>
       <View>
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setUsername}
-        />
+        <TextInput placeholder="Email" value={email} onChangeText={setEmail} />
         <TextInput
           placeholder="Password"
           value={password}
