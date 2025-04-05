@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Drawer } from "expo-router/drawer";
+import ProtectedRoute from "@/app/_middleware";
 import {
   DrawerContentComponentProps,
   DrawerContentScrollView,
@@ -9,9 +10,14 @@ import { Text, StyleSheet, Button, TouchableOpacity } from "react-native";
 import { Colors } from "@/constants/Theme";
 import { useTheme, ThemeProvider } from "@/context/ThemeContext";
 import { Moon, SunMedium } from "lucide-react-native";
+import { AuthContext } from "@/context/AuthContext";
 
 const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   const { theme, toggleTheme } = useTheme();
+  const { logout } = useContext(AuthContext);
+  const handleLogout = () => {
+    logout();
+  };
   return (
     <DrawerContentScrollView {...props}>
       <TouchableOpacity
@@ -30,6 +36,7 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
           </>
         )}
       </TouchableOpacity>
+      <Button title="Logout" onPress={handleLogout} />
     </DrawerContentScrollView>
   );
 };
@@ -37,17 +44,19 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
 export default function Layout() {
   const { theme } = useTheme();
   return (
-    <Drawer
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={() => ({
-        headerShown: false,
-        drawerStyle: [
-          styles.drawerStyle,
-          { backgroundColor: theme === "light" ? Colors.light : Colors.dark },
-        ],
-        drawerType: "front",
-      })}
-    />
+    <ProtectedRoute>
+      <Drawer
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={() => ({
+          headerShown: false,
+          drawerStyle: [
+            styles.drawerStyle,
+            { backgroundColor: theme === "light" ? Colors.light : Colors.dark },
+          ],
+          drawerType: "front",
+        })}
+      />
+    </ProtectedRoute>
   );
 }
 

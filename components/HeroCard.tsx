@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
     boxShadow: "0px 2px 8px 2px rgba(27, 40, 33, 0.08)",
     padding: 20,
     gap: 10,
+    overflow: "hidden",
   },
   svg: {
     position: "absolute",

@@ -1,45 +1,119 @@
-import { StyleSheet, Text, TextInput, View, TouchableOpacity , SafeAreaView} from 'react-native';
-import React from 'react';
-import { useRouter } from 'expo-router';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  TouchableOpacity,
+  SafeAreaView,
+  Alert,
+} from "react-native";
+import React from "react";
+import { useContext, useState } from "react";
+import { useRouter } from "expo-router";
+import { Fonts, Colors } from "@/constants/Theme";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function CreateAccount() {
-    const router = useRouter();
+  const router = useRouter();
+  const { theme } = useContext(AuthContext);
+  const [firstName, setFirstName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handleContinue = () => {
+    if (!firstName || !surname || !email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    router.push({
+      pathname: "/chooseRole",
+      params: {
+        firstName,
+        surname,
+        email,
+        password,
+      },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-    <View style={styles.container}>
-      <Text style={styles.txt}>
-        Create{"\n"}Your Account
-      </Text>
-      <View style={styles.horizontalContainer}>
-        <TextInput
-          style={[styles.input, styles.halfInput]}
-          placeholder="First Name"
-        />
-        <TextInput
-          style={[styles.input, styles.halfInput]}
-          placeholder="Surname"
-        />
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme === "dark" ? Colors.dark : Colors.light },
+        ]}
+      >
+        <View>
+          <Text
+            style={[
+              styles.txt,
+              { color: theme === "dark" ? Colors.textWhite : Colors.text },
+            ]}
+          >
+            Create{"\n"}Your Account
+          </Text>
+          <View style={styles.horizontalContainer}>
+            <TextInput
+              style={[styles.input, styles.halfInput]}
+              placeholder="First Name"
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+            <TextInput
+              style={[styles.input, styles.halfInput]}
+              placeholder="Surname"
+              value={surname}
+              onChangeText={setSurname}
+            />
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Email Address"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            secureTextEntry={true}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password"
+            secureTextEntry={true}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+        </View>
+        <View style={{ justifyContent: "center" }}>
+          <Text style={styles.txt1}>
+            By signing up, you agree to our terms and conditions.
+          </Text>
+          <View style={{ gap: 16 }}>
+            <TouchableOpacity style={styles.btn} onPress={handleContinue}>
+              <Text style={styles.btnText}>Continue</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.loginBtn]}
+              onPress={() => router.push("/login")}
+            >
+              <Text style={[styles.btnText, styles.loginBtnText]}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Email Address"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry={true}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        secureTextEntry={true}
-      />
-      <Text style={styles.txt1}>By signing up, you agree to our terms and conditions.</Text>
-      <TouchableOpacity style={styles.btn} onPress={() => router.push("/chooseRole")}>
-        <Text style={styles.btnText}>Create Account</Text>
-      </TouchableOpacity>
-    </View>
     </SafeAreaView>
   );
 }
@@ -47,76 +121,65 @@ export default function CreateAccount() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   container: {
     flex: 1,
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
     padding: 16,
-    backgroundColor: '#fff',
+    paddingBottom: 32,
+    paddingTop: 64,
   },
   txt: {
-    fontFamily: 'sans-serif',
-    color: '#1B2821',
+    fontFamily: Fonts.outfit.semiBold,
+    color: Colors.text,
     fontSize: 32,
-    paddingTop: 24,
-    paddingRight: 16,
-    paddingBottom: 12,
-    paddingLeft: 10,
-    fontWeight: '600',
-    letterSpacing: 2,
-    marginBottom: 10,
+    marginBottom: 24,
   },
   horizontalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-
-    
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   input: {
-    width: '100%',
-    height: 50,
+    width: "100%",
+    minHeight: 56,
     borderRadius: 16,
-    paddingRight: 13,
-    fontFamily: 'sans-serif',
-    fontWeight: '400',
-    fontSize: 17,
-    color: "#6C7D6D",
-    backgroundColor: "#E8F2ED",
-    paddingTop: 13.5,
-    paddingBottom: 13.5,
-    paddingLeft: 13,
+    paddingHorizontal: 12,
+    fontFamily: Fonts.plusJakarta.regular,
+    fontSize: 15,
+    color: Colors.secondary,
+    backgroundColor: Colors.primary,
     borderWidth: 0,
-    marginBottom: 15,
-    paddingHorizontal: 8,
-    
+    marginBottom: 16,
   },
   halfInput: {
-    width: '48%',
+    width: "48%",
   },
   txt1: {
-    fontWeight: 400,
+    fontFamily: Fonts.plusJakarta.light,
     fontSize: 13,
-    alignItems: 'center',
-    color: "#6C7D6D",
-    paddingLeft:20,
-    marginTop:150,
-    paddingBottom:15,
-
+    textAlign: "center",
+    color: Colors.secondary,
+    marginBottom: 8,
   },
   btn: {
-    backgroundColor: '#7ED1A7',
-    paddingTop: 14.5,
-    paddingRight: 16,
-    paddingBottom: 14.5,
-    paddingLeft: 16,
-    width: '100%',
+    backgroundColor: Colors.accent,
+    justifyContent: "center",
+    width: "100%",
     height: 50,
     borderRadius: 48,
-    alignItems: 'center',
+    alignItems: "center",
   },
   btnText: {
-    color: '#fff',
-    fontSize: 16,
+    fontFamily: Fonts.publicSans.medium,
+    color: Colors.textWhite,
+    fontSize: 17,
+  },
+  loginBtn: {
+    backgroundColor: Colors.light,
+    borderWidth: 1,
+    borderColor: Colors.text,
+  },
+  loginBtnText: {
+    color: Colors.text,
   },
 });

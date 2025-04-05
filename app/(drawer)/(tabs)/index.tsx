@@ -1,4 +1,3 @@
-import ProtectedRoute from "@/components/ProtectedRoute";
 import React, { useContext } from "react";
 import {
   View,
@@ -23,7 +22,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <ProtectedRoute>
+    <>
       <ScrollView
         contentContainerStyle={[
           styles.page,
@@ -134,7 +133,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-    </ProtectedRoute>
+    </>
   );
 }
 
