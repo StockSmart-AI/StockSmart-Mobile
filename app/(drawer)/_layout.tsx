@@ -43,6 +43,7 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
 
 export default function Layout() {
   const { theme } = useTheme();
+
   return (
     <ProtectedRoute>
       <Drawer

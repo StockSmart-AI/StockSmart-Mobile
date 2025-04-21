@@ -25,7 +25,7 @@ export default function AuthLayout() {
       <Stack.Screen
         name="verification"
         options={{
-          title: "Create Account",
+          title: "Verification",
           headerTitleStyle: {
             fontFamily: Fonts.plusJakarta.medium,
             fontSize: 17,

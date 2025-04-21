@@ -1,17 +1,17 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
-const apiURL = "https://stock-smart-backend.onrender.com/auth";
 
+export const apiURL = "https://stock-smart-backend-ny1z.onrender.com/auth";
 
 // Sign Up request
-export const signup = async (name, email, password, phone) => {
+export const signup = async (name, email, password, role) => {
   try {
     const response = await axios.post(`${apiURL}/signup`, {
       name,
       email,
       password,
-      phone,
+      role,
     });
     return response;
   } catch (error) {
@@ -34,17 +34,16 @@ export const login = async (email, password) => {
   }
 };
 
+
 // Refresh Request
 export const refresh = async (refresh_token) => {
   try {
     const response = await axios.post(`${apiURL}/refresh`, {
-      refresh_token,
+    }, {
+      headers: {
+        Authorization: `Bearer ${refresh_token}`,
+      }
     });
-
-    const { accessToken, refreshToken } = response.data;
-
-    await SecureStore.setItemAsync("authToken", accessToken);
-    await SecureStore.setItemAsync("refreshToken", refreshToken);
 
     return response;
   } catch (error) {
@@ -54,7 +53,7 @@ export const refresh = async (refresh_token) => {
 };
 
 
-// send otp
+// send otp request
 export const sendOtp = async (email) => {
   try {
     const response = await axios.post(`${apiURL}/send-otp`, {
@@ -67,6 +66,7 @@ export const sendOtp = async (email) => {
   }
 }
 
+//verify otp request
 export const verify = async (otp, email) => {
   try {
     const response = await axios.post(`${apiURL}/verify-otp`, {

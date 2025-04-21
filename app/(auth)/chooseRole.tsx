@@ -28,12 +28,7 @@ export default function ChooseRole() {
       try {
         setLoading(true);
         await signup(name, email, password, selectedRole);
-        router.push({
-          pathname: "/verification",
-          params: {
-            email,
-          },
-        });
+        router.push("/verification");
       } catch (error: any) {
         Alert.alert("Error", error.message);
       } finally {

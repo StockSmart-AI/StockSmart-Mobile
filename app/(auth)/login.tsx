@@ -27,8 +27,12 @@ export default function SignIn() {
 
     try {
       setLoading(true);
-      await login(email, password);
-      router.push("/");
+      const user = await login(email, password);
+      if (user.isVerified) {
+        router.push("/");
+      } else {
+        router.push("/(auth)/verification");
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {

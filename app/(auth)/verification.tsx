@@ -9,23 +9,42 @@ import {
 } from "react-native";
 import { Colors, Fonts } from "@/constants/Theme";
 import { AuthContext } from "@/context/AuthContext";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 
 const Verification = () => {
   const [otp, setOtp] = useState("");
-  const [canResend, setCanResend] = useState(false);
-  const { verify, sendOtp } = useContext(AuthContext);
+  const { verify, sendOtp, user } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
-  const { email } = useLocalSearchParams();
+  const [waitTime, setWaitTime] = useState(30);
+  const [counter, setCounter] = useState(waitTime);
+  const [isCounting, setisCounting] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCanResend(true);
-    }, 30000); // 30 seconds
+    let timer: NodeJS.Timeout;
+
+    if (isCounting && counter > 0) {
+      timer = setTimeout(() => {
+        setCounter((prev) => prev - 1);
+      }, 1000);
+    } else if (counter === 0) {
+      setisCounting(false);
+    }
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [counter, isCounting]);
 
+  const formatTime = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  //verification handler
   const handleVerify = async () => {
     if (!otp) {
       alert("Please enter the OTP");
@@ -33,7 +52,7 @@ const Verification = () => {
     }
     setLoading(true);
     try {
-      await verify(otp, email);
+      await verify(otp, user.email);
       router.replace("/");
     } catch {
       Alert.alert("Error", "Invalid OTP");
@@ -44,15 +63,13 @@ const Verification = () => {
     console.log("Entered OTP:", otp);
   };
 
+  // Resend handler
   const handleResend = async () => {
-    if (canResend) {
-      await sendOtp(email);
-      setCanResend(false);
-      Alert.alert("Success", "OTP resent to your email");
-      setTimeout(() => {
-        setCanResend(true);
-      }, 30000); // 30 seconds
-    }
+    await sendOtp(user.email);
+    Alert.alert("Success", "OTP resent to your email");
+    setWaitTime((prev) => prev * 2);
+    setCounter(waitTime);
+    setisCounting(true);
   };
 
   return (
@@ -71,17 +88,24 @@ const Verification = () => {
         </Text>
       </View>
       <View>
-        {canResend ? (
-          <View style={styles.resend}>
-            <Text style={styles.resendText}>Didn’t receive the OTP? </Text>
+        <View style={styles.resend}>
+          <Text style={styles.resendText}>Didn’t receive the OTP? </Text>
+
+          {!isCounting ? (
             <TouchableOpacity
               style={styles.resendButton}
               onPress={handleResend}
             >
               <Text style={{ color: Colors.accent }}>Resend</Text>
             </TouchableOpacity>
-          </View>
-        ) : null}
+          ) : (
+            <>
+              <Text style={styles.resendText}>
+                Resend in {formatTime(counter)}
+              </Text>
+            </>
+          )}
+        </View>
         <TouchableOpacity style={styles.button} onPress={handleVerify}>
           <Text style={styles.buttonText}>
             {loading ? "Verifying..." : "Verify"}
@@ -143,6 +167,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginBottom: 16,
+    gap: 2,
   },
   resendText: {
     alignItems: "center",

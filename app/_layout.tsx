@@ -87,11 +87,10 @@ function MainNavigator() {
 
   if (!fontsLoaded) return null;
 
-  const screens = user ? (
-    <Stack.Screen name="(drawer)" />
-  ) : (
-    <Stack.Screen name="(auth)" />
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(drawer)" />
+    </Stack>
   );
-
-  return <Stack screenOptions={{ headerShown: false }}>{screens}</Stack>;
 }
