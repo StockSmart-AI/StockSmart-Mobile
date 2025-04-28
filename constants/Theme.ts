@@ -7,6 +7,7 @@ const Colors = {
   primary: "#E8F2ED",
   secondary: "#6C7D6D",
   tertiary: "#4F5652",
+  error: "#F44447",
 };
 
 const Fonts = {

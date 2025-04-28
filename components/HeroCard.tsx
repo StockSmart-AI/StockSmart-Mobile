@@ -10,6 +10,7 @@ import {
   Touchable,
   TouchableOpacity,
 } from "react-native";
+import { PackagePlus, ShoppingCart } from "lucide-react-native";
 
 export default function HeroCard() {
   return (
@@ -93,10 +94,13 @@ export default function HeroCard() {
         }}
       >
         <TouchableOpacity style={styles.heroButton} activeOpacity={0.5}>
-          <Text style={styles.buttonText}>Add Item</Text>
+          <PackagePlus size={24} color={Colors.text} strokeWidth={1.5} />
+          <Text style={styles.buttonText}>Restock</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.heroButton} activeOpacity={0.6}>
-          <Text style={styles.buttonText}>Remove Item</Text>
+          <ShoppingCart size={24} color={Colors.text} strokeWidth={1.5} />
+
+          <Text style={styles.buttonText}>Sell</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -105,7 +109,10 @@ export default function HeroCard() {
 
 const styles = StyleSheet.create({
   heroButton: {
-    flex: 2,
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
     width: 100,
     backgroundColor: Colors.light,
     paddingHorizontal: 16,
@@ -126,6 +133,7 @@ const styles = StyleSheet.create({
     boxShadow: "0px 2px 8px 2px rgba(27, 40, 33, 0.08)",
     padding: 20,
     gap: 10,
+    overflow: "hidden",
   },
   svg: {
     position: "absolute",

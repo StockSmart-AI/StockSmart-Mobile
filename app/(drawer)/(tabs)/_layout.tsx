@@ -2,6 +2,9 @@ import { Tabs } from "expo-router";
 import { StyleSheet } from "react-native";
 import TabBar from "@/components/TabBar";
 import Header from "@/components/Header";
+import React, { useContext, useEffect } from "react";
+import { router } from "expo-router";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function TabLayout() {
   return (
