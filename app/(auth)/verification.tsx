@@ -53,7 +53,7 @@ const Verification = () => {
     setLoading(true);
     try {
       await verify(otp, user.email);
-      router.replace("/");
+      router.replace("/(shopCreation)/shopName");
     } catch {
       Alert.alert("Error", "Invalid OTP");
       return;
