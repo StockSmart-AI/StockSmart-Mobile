@@ -45,7 +45,7 @@ export default function RootLayout() {
 }
 
 function MainNavigator() {
-  const { isAuthenticated, loading } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
   const [fontsLoaded] = useFonts({
     PublicSans_300Light,
     PublicSans_400Regular,
@@ -87,17 +87,10 @@ function MainNavigator() {
 
   if (!fontsLoaded) return null;
 
-  if (!isAuthenticated) {
-    return (
-      <Stack>
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-      </Stack>
-    );
-  }
-
   return (
-    <Stack>
-      <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(drawer)" />
     </Stack>
   );
 }
