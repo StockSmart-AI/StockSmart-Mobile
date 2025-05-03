@@ -1,80 +1,99 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Image, Pressable, TextInput, StyleSheet, Platform, KeyboardAvoidingView} from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  Platform,
+  KeyboardAvoidingView,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { Colors, Fonts } from "@/constants/Theme";
 
 const ShopNameScreen = () => {
-    const router = useRouter();
-    const [shopName, setShopName] = useState("");
+  const router = useRouter();
+  const [shopName, setShopName] = useState("");
 
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Let's give</Text>
-            <Text style={styles.subtitle}>your shop a name!</Text>
-            <Text style={styles.label}>Shop Name</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="e.g. Shoa-Merkato"
-                placeholderTextColor="#A8B0A8"
-                value={shopName}
-                onChangeText={setShopName}
-            />
-            <Pressable style={[styles.button, !shopName && styles.disabledButton]}
-                       disabled={!shopName} 
-                       onPress={() => {
-                        if (shopName){router.push("/shopLocation")}}}>
-
-                       <Text style={styles.buttonText}>Continue</Text>
-            </Pressable>
-
+  return (
+    <View style={styles.container}>
+      <View style={{ gap: 48 }}>
+        <View>
+          <Text style={styles.title}>Let's give</Text>
+          <Text style={styles.subtitle}>your shop a name!</Text>
         </View>
-    );
+        <View>
+          <Text style={styles.label}>Shop Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Shoa-Merkato"
+            placeholderTextColor="#A8B0A8"
+            value={shopName}
+            onChangeText={setShopName}
+          />
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.button, !shopName && styles.disabledButton]}
+        disabled={!shopName}
+        onPress={() => {
+          if (shopName) {
+            router.push("/shopLocation");
+          }
+        }}
+      >
+        <Text style={styles.buttonText}>Continue</Text>
+      </TouchableOpacity>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "white",
-        padding: 20,
-        justifyContent: "center",
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: "bold",
-        color: "#1B2821",
-    },
-    subtitle: {
-        fontSize: 32,
-        fontWeight: "bold",
-        color: "#1B2821",
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 20,
-        color: "#1B2821",
-        marginBottom: 5,
-    },
-    input: {
-        backgroundColor: "#E8F2ED",
-        padding: 15,
-        borderRadius: 20,
-        fontSize: 16,
-        marginBottom: 20,
-    },
-    button: {
-        backgroundColor: "#7ED1A7",
-        padding: 15,
-        borderRadius: 25,
-        alignItems: "center",
-        marginTop: 270,
-    },
-    buttonText: {
-        fontSize: 16,
-        color: "white",
-        fontWeight: "bold",
-    },
-    disabledButton: {
-        backgroundColor: "#B0C4B1",
-    }
+  container: {
+    flex: 1,
+    backgroundColor: Colors.light,
+    padding: 20,
+    justifyContent: "space-between",
+  },
+  title: {
+    fontSize: 32,
+    color: Colors.text,
+    fontFamily: Fonts.outfit.semiBold,
+  },
+  subtitle: {
+    fontSize: 32,
+    fontFamily: Fonts.outfit.semiBold,
+    color: Colors.text,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 20,
+    fontFamily: Fonts.outfit.regular,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: Colors.primary,
+    padding: 15,
+    borderRadius: 20,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: Colors.accent,
+    padding: 15,
+    borderRadius: 25,
+    alignItems: "center",
+  },
+  buttonText: {
+    fontSize: 17,
+    fontFamily: Fonts.plusJakarta.medium,
+    color: "white",
+  },
+  disabledButton: {
+    backgroundColor: Colors.secondary,
+  },
 });
 
 export default ShopNameScreen;

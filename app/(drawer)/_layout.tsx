@@ -18,6 +18,7 @@ import {
   SunMedium,
 } from "lucide-react-native";
 import { AuthContext } from "@/context/AuthContext";
+import { Stack } from "expo-router";
 
 const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   const { theme, toggleTheme } = useTheme();
@@ -128,6 +129,7 @@ export default function Layout() {
           drawerType: "front",
         })}
       />
+      <Stack.Screen name="(shopCreation)" />
     </ProtectedRoute>
   );
 }
