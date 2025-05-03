@@ -11,6 +11,7 @@ import { Colors, Fonts } from "@/constants/Theme";
 import { useTheme } from "@/context/ThemeContext";
 import { useContext, useEffect, useRef, useState } from "react";
 import { AuthContext } from "@/context/AuthContext";
+import { router } from "expo-router";
 
 const shops = [
   "Shop-Merkato1",
@@ -134,7 +135,13 @@ export default function Header() {
               <Text style={styles.listText}>{shop}</Text>
             </View>
           ))}
-          <TouchableOpacity style={styles.addShopBtn}>
+          <TouchableOpacity
+            style={styles.addShopBtn}
+            onPress={() => {
+              setShopModal(false);
+              router.push("/(shopCreation)/shopName");
+            }}
+          >
             <Plus color={Colors.accent} size={24} />
             <Text style={styles.addShopText}>New Shop</Text>
           </TouchableOpacity>
