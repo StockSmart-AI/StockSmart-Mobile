@@ -6,12 +6,14 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useShopCreation } from "@/context/ShopCreationContext";
 import { Colors, Fonts } from "@/constants/Theme";
+import { CircleMinus } from "lucide-react-native";
 
 const AddEmployeesScreen = () => {
   const router = useRouter();
@@ -86,16 +88,40 @@ const AddEmployeesScreen = () => {
           keyExtractor={(item) => item}
           renderItem={({ item }) => (
             <View style={styles.employeeCard}>
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: Colors.accent,
+                  borderRadius: 100,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: Fonts.outfit.semiBold,
+                    fontSize: 16,
+                    color: Colors.light,
+                  }}
+                >
+                  {item[0]}
+                </Text>
+              </View>
               <Text style={styles.employeeName}>{item}</Text>
               <TouchableOpacity onPress={() => removeEmployee(item)}>
-                <Ionicons name="remove-circle" size={24} color="#D3D3D3" />
+                <CircleMinus
+                  color={Colors.secondary}
+                  size={24}
+                  strokeWidth={1.5}
+                />
               </TouchableOpacity>
             </View>
           )}
         />
       </View>
 
-      <View style={styles.buttonContainer}>
+      <KeyboardAvoidingView style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.skipButton}
           onPress={() => router.push("/grantRestock")}
@@ -108,11 +134,10 @@ const AddEmployeesScreen = () => {
             shopDetails.employees.length === 0 && styles.disabledButton,
           ]}
           disabled={shopDetails.employees.length === 0}
-          onPress={() => router.push("/grantRestock")}
         >
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -134,7 +159,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.primary,
-    borderRadius: 10,
+    borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginTop: 10,
@@ -145,6 +170,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.outfit.regular,
     color: Colors.text,
     marginTop: 10,
+    marginBottom: 16,
   },
   employeeList: {
     flex: 1,
@@ -162,9 +188,15 @@ const styles = StyleSheet.create({
   employeeCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 8,
   },
-  employeeName: { flex: 1, marginLeft: 10, fontSize: 16, color: "#000" },
+  employeeName: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 18,
+    color: Colors.text,
+    fontFamily: Fonts.outfit.regular,
+  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -173,22 +205,22 @@ const styles = StyleSheet.create({
   skipButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "black",
+    borderColor: Colors.text,
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: "center",
   },
-  skipText: { fontSize: 16, color: "black" },
+  skipText: { fontSize: 16, color: Colors.text },
   continueButton: {
     flex: 1,
-    backgroundColor: "#6AC28A",
+    backgroundColor: Colors.accent,
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: "center",
     marginLeft: 10,
   },
-  continueText: { fontSize: 16, color: "#fff", fontWeight: "bold" },
-  disabledButton: { backgroundColor: "#B0C4B1" },
+  continueText: { fontSize: 16, color: Colors.light, fontWeight: "bold" },
+  disabledButton: { backgroundColor: Colors.secondary },
 });
 
 export default AddEmployeesScreen;

@@ -109,6 +109,7 @@ export default function HomeScreen() {
               styles.buttonStyle,
               { borderRadius: 100, borderColor: Colors.text },
             ]}
+            onPress={() => router.push("/quickScan")}
           >
             <ScanBarcode size={24} color={Colors.text} strokeWidth={1.5} />
             <Text style={[styles.buttonText, { color: Colors.text }]}>
