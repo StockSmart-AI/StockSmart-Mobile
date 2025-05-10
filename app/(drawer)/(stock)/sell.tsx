@@ -1,39 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Svg, { Path } from "react-native-svg";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
-import { ArrowLeft, Search, Zap, ZapOff } from "lucide-react-native";
+import { ArrowLeft, Search } from "lucide-react-native";
 import { Colors, Fonts } from "@/constants/Theme";
 import { router } from "expo-router";
-import { BarcodeScanningResult } from "expo-camera";
-import { CameraView, Camera } from "expo-camera";
+import Cart from "@/components/Cart";
 import Scanner from "@/components/Scanner";
 
-export default function QuickScan() {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [scanned, setScanned] = useState(false);
-  const [data, setData] = useState<string | null>(null);
-  const [flash, setFlash] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
-
-  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
-    setScanned(true);
-    setData(data);
-    router.push("/productDetails");
-  };
-
-  const toggleFlash = () => {
-    setFlash((current) => !current);
-  };
-
-  if (hasPermission === null) return <Text>Requesting permission...</Text>;
-  if (hasPermission === false) return <Text>No access to camera</Text>;
-
+export default function Sell() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -41,7 +15,7 @@ export default function QuickScan() {
           <ArrowLeft size={32} color={Colors.accent} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={{ fontFamily: Fonts.outfit.medium, fontSize: 20 }}>
-          Quick Scan
+          Sell Product
         </Text>
         <ArrowLeft size={32} color={"transparent"} strokeWidth={1.5} />
       </View>
@@ -51,8 +25,9 @@ export default function QuickScan() {
       <View
         style={{
           flex: 1,
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           padding: 24,
+          paddingBottom: 120,
         }}
       >
         <TouchableOpacity
@@ -74,6 +49,7 @@ export default function QuickScan() {
           </Text>
         </TouchableOpacity>
       </View>
+      <Cart />
     </View>
   );
 }
@@ -83,23 +59,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: Colors.light,
-    gap: 48,
+    gap: 24,
   },
   header: {
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  cameraContainer: {
-    alignSelf: "center",
-    width: 290,
-    height: 290,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  camera: {
-    height: 250,
-    width: 250,
   },
 });

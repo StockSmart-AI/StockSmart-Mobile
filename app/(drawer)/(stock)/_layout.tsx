@@ -6,6 +6,7 @@ export default function Stock() {
       <Stack.Screen name="newProduct" options={{ headerShown: false }} />
       <Stack.Screen name="quickScan" options={{ headerShown: false }} />
       <Stack.Screen name="productDetails" options={{ headerShown: false }} />
+      <Stack.Screen name="sell" options={{ headerShown: false }} />
     </Stack>
   );
 }
