@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { PackagePlus, ShoppingCart } from "lucide-react-native";
+import { router } from "expo-router";
 
 export default function HeroCard() {
   return (
@@ -97,7 +98,11 @@ export default function HeroCard() {
           <PackagePlus size={24} color={Colors.text} strokeWidth={1.5} />
           <Text style={styles.buttonText}>Restock</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.heroButton} activeOpacity={0.6}>
+        <TouchableOpacity
+          style={styles.heroButton}
+          activeOpacity={0.6}
+          onPress={() => router.push("/(drawer)/(stock)/sell")}
+        >
           <ShoppingCart size={24} color={Colors.text} strokeWidth={1.5} />
 
           <Text style={styles.buttonText}>Sell</Text>
