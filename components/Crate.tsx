@@ -18,7 +18,7 @@ import {
 } from "lucide-react-native";
 import { ScrollView } from "react-native-gesture-handler";
 
-const initialCartData = [
+const initialCrateData = [
   {
     id: "1",
     name: "Pepsi Soda",
@@ -51,11 +51,11 @@ const initialCartData = [
   },
 ];
 
-const Cart = () => {
+const Crate = () => {
   const snapPoints = useMemo(() => ["10%", "90%"], []);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [bottomSheetState, setBottomSheetState] = useState(0);
-  const [cartItems, setCartItems] = useState(initialCartData);
+  const [crateItems, setCrateItems] = useState(initialCrateData);
 
   const toggleBottomSheet = () => {
     if (bottomSheetState === 1) {
@@ -67,7 +67,7 @@ const Cart = () => {
   };
 
   const handleIncreaseQuantity = (itemId: string) => {
-    setCartItems((prevItems) =>
+    setCrateItems((prevItems) =>
       prevItems.map((item) =>
         item.id === itemId && !item.isSerialized
           ? { ...item, quantity: item.quantity + 1 }
@@ -77,7 +77,7 @@ const Cart = () => {
   };
 
   const handleDecreaseQuantity = (itemId: string) => {
-    setCartItems((prevItems) =>
+    setCrateItems((prevItems) =>
       prevItems.map((item) =>
         item.id === itemId && !item.isSerialized && item.quantity > 1
           ? { ...item, quantity: item.quantity - 1 }
@@ -87,11 +87,13 @@ const Cart = () => {
   };
 
   const handleRemoveItem = (itemId: string) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    setCrateItems((prevItems) =>
+      prevItems.filter((item) => item.id !== itemId)
+    );
   };
 
   const handleRemoveBarcode = (itemId: string, barcodeToRemove: string) => {
-    setCartItems(
+    setCrateItems(
       (prevItems) =>
         prevItems
           .map((item) => {
@@ -111,12 +113,12 @@ const Cart = () => {
     );
   };
 
-  const handleClearCart = () => {
-    setCartItems([]);
+  const handleClearCrate = () => {
+    setCrateItems([]);
   };
 
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cartItems.reduce(
+  const totalItems = crateItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = crateItems.reduce(
     (sum, item) => sum + item.quantity * item.pricePerUnit,
     0
   );
@@ -153,27 +155,27 @@ const Cart = () => {
       )}
     >
       <BottomSheetView style={styles.contentContainer}>
-        <View style={styles.cartHeaderContainer}>
-          <Text style={styles.cartHeaderText}>Cart</Text>
-          <Text style={styles.cartItemCountText}>{totalItems} items</Text>
+        <View style={styles.crateHeaderContainer}>
+          <Text style={styles.crateHeaderText}>Crate</Text>
+          <Text style={styles.crateItemCountText}>{totalItems} items</Text>
         </View>
         <ScrollView
           style={{ maxHeight: "60%" }}
           contentContainerStyle={styles.scrollViewContentContainer}
         >
-          {cartItems.length === 0 ? (
-            <View style={styles.emptyCartContainer}>
-              <Text style={styles.emptyCartText}>
-                Your cart is empty. Add some items!
+          {crateItems.length === 0 ? (
+            <View style={styles.emptyCrateContainer}>
+              <Text style={styles.emptyCrateText}>
+                Your crate is empty. Add some items!
               </Text>
             </View>
           ) : (
-            cartItems.map((item) => (
-              <View key={item.id} style={styles.cartItemOuterContainer}>
-                <View style={styles.cartItemRow}>
-                  <View style={styles.cartItemImageAndDetails}>
-                    <View style={styles.cartItemImageContainer}>
-                      <Image source={item.img} style={styles.cartItemImage} />
+            crateItems.map((item) => (
+              <View key={item.id} style={styles.crateItemOuterContainer}>
+                <View style={styles.crateItemRow}>
+                  <View style={styles.crateItemImageAndDetails}>
+                    <View style={styles.crateItemImageContainer}>
+                      <Image source={item.img} style={styles.crateItemImage} />
                       <TouchableOpacity
                         style={styles.removeItemButton}
                         onPress={() => handleRemoveItem(item.id)}
@@ -181,11 +183,11 @@ const Cart = () => {
                         <X color={Colors.light} size={20} strokeWidth={1.5} />
                       </TouchableOpacity>
                     </View>
-                    <View style={styles.cartItemDetails}>
-                      <Text style={styles.cartItemCategory}>
+                    <View style={styles.crateItemDetails}>
+                      <Text style={styles.crateItemCategory}>
                         {item.category}
                       </Text>
-                      <Text style={styles.cartItemName}>{item.name}</Text>
+                      <Text style={styles.crateItemName}>{item.name}</Text>
                       <View style={styles.quantityControlContainer}>
                         <TouchableOpacity
                           onPress={() => handleIncreaseQuantity(item.id)}
@@ -219,7 +221,7 @@ const Cart = () => {
                       </View>
                     </View>
                   </View>
-                  <Text style={styles.cartItemPrice}>
+                  <Text style={styles.crateItemPrice}>
                     {item.quantity * item.pricePerUnit}ETB
                   </Text>
                 </View>
@@ -268,20 +270,20 @@ const Cart = () => {
             <TouchableOpacity
               style={[
                 styles.confirmButton,
-                cartItems.length === 0 && styles.disabledConfirmButton,
+                crateItems.length === 0 && styles.disabledConfirmButton,
               ]}
-              disabled={cartItems.length === 0}
+              disabled={crateItems.length === 0}
             >
               <ShoppingBag color={Colors.light} size={20} strokeWidth={1.5} />
               <Text style={styles.confirmButtonText}>Confirm</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
-            style={styles.clearCartButton}
-            onPress={handleClearCart}
+            style={styles.clearCrateButton}
+            onPress={handleClearCrate}
           >
             <Eraser color={Colors.light} strokeWidth={1.5} size={20} />
-            <Text style={styles.clearCartButtonText}>Clear Cart</Text>
+            <Text style={styles.clearCrateButtonText}>Clear Crate</Text>
           </TouchableOpacity>
         </View>
       </BottomSheetView>
@@ -311,57 +313,57 @@ const styles = StyleSheet.create({
     top: -25,
     zIndex: 10,
   },
-  cartHeaderContainer: {
+  crateHeaderContainer: {
     paddingTop: 20,
     paddingBottom: 16,
     paddingHorizontal: 32,
     borderBottomColor: Colors.tertiary,
     borderBottomWidth: 0.5,
   },
-  cartHeaderText: {
+  crateHeaderText: {
     fontFamily: Fonts.outfit.medium,
     fontSize: 24,
   },
-  cartItemCountText: {
+  crateItemCountText: {
     fontFamily: Fonts.publicSans.regular,
     fontSize: 16,
   },
   scrollViewContentContainer: {
     padding: 24,
-    flexGrow: 1, // Ensure container can grow to allow centering of empty cart message
+    flexGrow: 1, // Ensure container can grow to allow centering of empty crate message
     justifyContent: "space-between",
   },
-  emptyCartContainer: {
+  emptyCrateContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  emptyCartText: {
+  emptyCrateText: {
     fontFamily: Fonts.publicSans.regular,
     fontSize: 18,
     color: Colors.tertiary,
     textAlign: "center",
   },
-  cartItemOuterContainer: {
+  crateItemOuterContainer: {
     marginBottom: 16, // Add space between items
     borderBottomWidth: 0.5,
     borderColor: Colors.tertiary,
     paddingBottom: 16,
   },
-  cartItemRow: {
+  crateItemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  cartItemImageAndDetails: {
+  crateItemImageAndDetails: {
     flexDirection: "row",
     gap: 10,
   },
-  cartItemImageContainer: {
+  crateItemImageContainer: {
     position: "relative",
     width: 96,
     height: 96,
   },
-  cartItemImage: {
+  crateItemImage: {
     resizeMode: "contain",
     height: "100%",
     width: "100%",
@@ -377,16 +379,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cartItemDetails: {
+  crateItemDetails: {
     justifyContent: "center",
     gap: 4,
   },
-  cartItemCategory: {
+  crateItemCategory: {
     fontFamily: Fonts.publicSans.regular,
     fontSize: 14,
     color: Colors.tertiary,
   },
-  cartItemName: {
+  crateItemName: {
     fontFamily: Fonts.publicSans.semiBold,
     fontSize: 18,
   },
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.publicSans.semiBold,
   },
-  cartItemPrice: {
+  crateItemPrice: {
     fontSize: 20,
     fontFamily: Fonts.publicSans.semiBold,
     color: Colors.accent,
@@ -407,7 +409,7 @@ const styles = StyleSheet.create({
   },
   barcodeScrollViewContainer: {
     paddingVertical: 16,
-    // borderBottomWidth: 0.5, // Removed as it's now on cartItemOuterContainer
+    // borderBottomWidth: 0.5, // Removed as it's now on crateItemOuterContainer
     // borderColor: Colors.tertiary, // Removed
   },
   barcodeScrollContent: {
@@ -460,7 +462,7 @@ const styles = StyleSheet.create({
     color: Colors.light,
     fontSize: 18,
   },
-  clearCartButton: {
+  clearCrateButton: {
     backgroundColor: Colors.error,
     flexDirection: "row",
     paddingVertical: 12,
@@ -469,11 +471,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  clearCartButtonText: {
+  clearCrateButtonText: {
     fontFamily: Fonts.publicSans.regular,
     fontSize: 18,
     color: Colors.light,
   },
 });
 
-export default Cart;
+export default Crate;
