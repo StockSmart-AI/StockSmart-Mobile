@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Svg, { Path } from "react-native-svg";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
-import { ArrowLeft, Search } from "lucide-react-native";
+import { ArrowLeft, ScanBarcode, Search } from "lucide-react-native";
 import { Colors, Fonts } from "@/constants/Theme";
 import { router } from "expo-router";
 import Cart from "@/components/Cart";
