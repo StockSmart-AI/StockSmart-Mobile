@@ -78,7 +78,7 @@ export default function ChooseRole() {
           </View>
           <View>
             <Image
-              source={require("@/assets/images/employee.png")}
+              source={require("@/assets/images/employee-small.png")}
               style={styles.iconImage}
             />
           </View>
