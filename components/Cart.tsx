@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import { StyleSheet, TouchableOpacity, Text, View, Image } from "react-native";
 import BottomSheet, {
   BottomSheetView,
@@ -343,7 +343,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   cartItemOuterContainer: {
-    // New style for grouping item row and its barcodes
     marginBottom: 16, // Add space between items
     borderBottomWidth: 0.5,
     borderColor: Colors.tertiary,

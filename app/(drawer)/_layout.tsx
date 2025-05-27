@@ -8,7 +8,7 @@ import {
 } from "@react-navigation/drawer";
 import { Text, StyleSheet, Button, TouchableOpacity, View } from "react-native";
 import { Colors, Fonts } from "@/constants/Theme";
-import { useTheme, ThemeProvider } from "@/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import {
   FileUser,
   LogOut,
