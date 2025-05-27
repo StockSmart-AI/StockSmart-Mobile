@@ -3,274 +3,269 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
+  ScrollView,
   TouchableOpacity,
   Image,
   FlatList,
-  Dimensions,
 } from "react-native";
-import { Plus, Baby, ShoppingBag, Soup, Sparkles } from "lucide-react-native";
+import { Search, Plus } from "lucide-react-native";
 import { Colors, Fonts } from "@/constants/Theme";
+import { router } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 
-const { width } = Dimensions.get("window");
-const CARD_MARGIN = 12;
-const CARD_WIDTH = (width - CARD_MARGIN * 3) / 2;
-
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  units: number;
-  image: string;
-}
-
-const categories = [
-  { key: "Baby Products", label: "Baby Products", icon: <Baby size={16} color="#fff" /> },
-  { key: "Cosmetics", label: "Cosmetics", icon: <Sparkles size={16} color="#fff" /> },
-  { key: "Processed Food", label: "Processed Food", icon: <Soup size={16} color="#fff" /> },
-];
-
-const mockProducts: Product[] = [
+// Sample product data
+const sampleProducts = [
   {
     id: "1",
-    name: "Chips",
-    category: "Processed Food",
-    price: 2.0,
+    title: "Soda",
     units: 234,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
+    price: 2.00,
+    category: "Processed Food",
+    image: require("@/assets/images/chips.png"),
   },
   {
     id: "2",
-    name: "Soda",
-    category: "Processed Food",
-    price: 2.0,
-    units: 234,
-    image: "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=400&q=80",
+    title: "Baby Shampoo",
+    units: 45,
+    price: 8.99,
+    category: "Baby Products",
+    image: require("@/assets/images/chips.png"),
   },
   {
     id: "3",
-    name: "Cosmetic Cream",
+    title: "Face Cream",
+    units: 78,
+    price: 15.99,
     category: "Cosmetics",
-    price: 2.0,
-    units: 234,
-    image: "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80",
+    image: require("@/assets/images/chips.png"),
   },
   {
     id: "4",
-    name: "Noodles",
+    title: "Canned Beans",
+    units: 120,
+    price: 1.99,
     category: "Processed Food",
-    price: 2.0,
-    units: 234,
-    image: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: "5",
-    name: "Baby Lotion",
-    category: "Baby Products",
-    price: 2.0,
-    units: 234,
-    image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    id: "6",
-    name: "Energy Drink",
-    category: "Processed Food",
-    price: 2.0,
-    units: 234,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80",
-  },
+    image: require("@/assets/images/chips.png"),
+  }
 ];
 
-const ProductListing = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+const categories = ["Baby Products", "Cosmetics", "Processed Food"];
 
-  const filteredProducts = mockProducts.filter((product) => {
-    const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+export default function Inventory() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [products] = useState(sampleProducts);
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      !selectedCategory || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  const renderProductCard = ({ item }: { item: Product }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-      <Text style={styles.cardName}>{item.name}</Text>
-      <Text style={styles.cardUnits}>{item.units} Units</Text>
-      <View style={styles.cardBottomRow}>
-        <Text style={styles.cardPrice}>${item.price.toFixed(2)}</Text>
-        <TouchableOpacity style={styles.plusButton}>
-          <Plus size={22} color="#222" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderProductCard = ({ item }) => {
+    return (
+      <TouchableOpacity
+        style={styles.productCard}
+        onPress={() => router.push({ pathname: "/(drawer)/(stock)/productDetails", params: { id: item.id } })}
+      >
+        <Image 
+          source={item.image} 
+          style={styles.productImage}
+          resizeMode="cover"
+        />
+        <View style={styles.infoRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.productUnits}>{item.units} Units</Text>
+          </View>
+          <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       {/* Search Bar */}
-      <View style={styles.searchBarWrapper}>
+      <View style={styles.searchContainer}>
+        <Search size={24} color={Colors.text} strokeWidth={1.5} />
         <TextInput
-          style={styles.searchBar}
+          style={styles.searchInput}
           placeholder="Search Products"
-          placeholderTextColor="#A0A0A0"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
-      {/* Category Chips */}
+
+      {/* Category Filters */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.chipScroll}
-        contentContainerStyle={{ paddingVertical: 8, paddingHorizontal: 4 }}
+        style={styles.categoriesContainer}
+        contentContainerStyle={styles.categoriesContent}
       >
-        {categories.map((cat) => (
+        {categories.map((category) => (
           <TouchableOpacity
-            key={cat.key}
+            key={category}
             style={[
-              styles.chip,
-              selectedCategory === cat.key && styles.chipSelected,
+              styles.categoryChip,
+              selectedCategory === category && styles.activeCategoryChip,
             ]}
-            onPress={() => setSelectedCategory(selectedCategory === cat.key ? null : cat.key)}
-            activeOpacity={0.8}
+            onPress={() =>
+              setSelectedCategory(
+                selectedCategory === category ? null : category
+              )
+            }
           >
-            {cat.icon}
             <Text
               style={[
-                styles.chipText,
-                selectedCategory === cat.key && styles.chipTextSelected,
+                styles.categoryText,
+                selectedCategory === category && styles.activeCategoryText,
               ]}
             >
-              {cat.label}
+              {category}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
+
       {/* Product Grid */}
       <FlatList
         data={filteredProducts}
         renderItem={renderProductCard}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        contentContainerStyle={styles.grid}
+        contentContainerStyle={styles.productGrid}
         showsVerticalScrollIndicator={false}
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#111",
-    paddingTop: 16,
+    backgroundColor: Colors.light,
+    padding: 16,
   },
-  searchBarWrapper: {
-    paddingHorizontal: 12,
-    marginBottom: 4,
-  },
-  searchBar: {
-    backgroundColor: "#F2F7F4",
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#222",
-  },
-  chipScroll: {
-    marginBottom: 8,
-    minHeight: 44,
-  },
-  chip: {
+  searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#222",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
+    backgroundColor: "#2B785117",
+    borderColor: Colors.text,
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+    fontFamily: Fonts.publicSans.regular,
+  },
+  categoriesContainer: {
+    marginBottom: 20,
+  },
+  categoriesContent: {
+    paddingRight: 16,
+  },
+  categoryChip: {
+    width: 133,
+    height: 32,
+    minHeight: 28,
+    gap: 4,
+    borderRadius: 14,
+    paddingTop: 8,
+    paddingRight: 12,
+    paddingBottom: 8,
+    paddingLeft: 12,
     borderWidth: 1,
-    borderColor: "#222",
+    borderColor: Colors.text,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chipSelected: {
-    backgroundColor: "#7ED1A7",
-    borderColor: "#7ED1A7",
+  activeCategoryChip: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
   },
-  chipText: {
-    color: "#fff",
-    fontSize: 15,
-    marginLeft: 6,
-    fontWeight: "600",
+  categoryText: {
+    fontFamily: Fonts.publicSans.medium,
+    fontSize: 13,
+    color: Colors.text,
   },
-  chipTextSelected: {
-    color: "#222",
+  activeCategoryText: {
+    color: Colors.light,
   },
-  grid: {
-    paddingHorizontal: CARD_MARGIN,
-    paddingBottom: 24,
+  productGrid: {
+    paddingBottom: 16,
   },
-  card: {
-    backgroundColor: "#181818",
-    borderRadius: 18,
-    marginBottom: CARD_MARGIN,
-    marginHorizontal: CARD_MARGIN / 2,
-    width: CARD_WIDTH,
+  productCard: {
+    width: 150,
+    height: 273,
+    minWidth: 160,
+    backgroundColor: "#fff",
+    borderRadius: 16,
     padding: 0,
     overflow: "hidden",
+    margin: 8,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 0,
   },
-  cardImage: {
+  productImage: {
     width: "100%",
-    height: CARD_WIDTH,
-    resizeMode: "cover",
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    height: 195,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    backgroundColor: "transparent",
   },
-  cardName: {
-    color: "#444",
-    fontSize: 17,
-    fontWeight: "600",
-    marginTop: 10,
-    marginLeft: 12,
-  },
-  cardUnits: {
-    color: "#888",
-    fontSize: 13,
-    marginLeft: 12,
-    marginBottom: 2,
-  },
-  cardBottomRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 6,
-    marginBottom: 10,
-    marginHorizontal: 12,
-  },
-  cardPrice: {
-    color: "#7ED1A7",
+  productTitle: {
+    fontFamily: Fonts.publicSans.semiBold,
     fontSize: 18,
-    fontWeight: "bold",
+    color: "#222",
+    marginTop: 12,
+    marginLeft: 12,
+    marginRight: 12,
   },
-  plusButton: {
-    backgroundColor: "#fff",
-    borderRadius: 100,
-    width: 36,
-    height: 36,
+  productUnits: {
+    fontFamily: Fonts.publicSans.regular,
+    fontSize: 13,
+    color: "#1B2821",
+    marginLeft: 12,
+    marginRight: 12,
+    marginBottom: 0,
+  },
+  priceContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 2,
+    marginTop: 8,
+    marginRight: 12,
+    marginLeft: 12,
+  },
+  productPrice: {
+    fontFamily: Fonts.publicSans.semiBold,
+    fontSize: 18,
+    color: Colors.accent,
+    paddingTop: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginLeft: 12,
+    marginRight: 12,
   },
 });
-
-export default ProductListing;
