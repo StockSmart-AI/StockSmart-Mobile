@@ -30,6 +30,7 @@ import {
   bottleDispenser,
   bottlePerfume,
 } from "@lucide/lab";
+import { router } from "expo-router";
 
 const categories = [
   {
@@ -217,7 +218,7 @@ const Transactions = () => {
           <>
             <Text style={styles.dateGroupHeader}>Today</Text>
             {grouped.today.map((tx) => (
-              <View key={tx.id} style={styles.transactionItemContainer}>
+              <TouchableOpacity key={tx.id} style={styles.transactionItemContainer} onPress={() => router.push({ pathname: "/(drawer)/transactionsDetail", params: { id: tx.id } })}>
                 <View style={styles.transactionItemRow}>
                   <View style={styles.transactionInfoContainer}>
                     {tx.type === "restock" ? (
@@ -282,7 +283,7 @@ const Transactions = () => {
                     {tx.price}ETB
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </>
         )}
@@ -290,7 +291,7 @@ const Transactions = () => {
           <>
             <Text style={styles.dateGroupHeaderBold}>Yesterday</Text>
             {grouped.yesterday.map((tx) => (
-              <View key={tx.id} style={styles.transactionItemContainer}>
+              <TouchableOpacity key={tx.id} style={styles.transactionItemContainer} onPress={() => router.push({ pathname: "/(drawer)/transactionsDetail", params: { id: tx.id } })}>
                 <View style={styles.transactionItemRow}>
                   <View style={styles.transactionInfoContainer}>
                     {tx.type === "restock" ? (
@@ -351,15 +352,16 @@ const Transactions = () => {
                     {tx.price}ETB
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </>
         )}
         {Object.keys(grouped.earlier).map((date) => (
           <View key={date}>
             <Text style={styles.dateGroupHeaderBold}>{date}</Text>
+            
             {grouped.earlier[date].map((tx) => (
-              <View key={tx.id} style={styles.transactionItemContainer}>
+              <TouchableOpacity key={tx.id} style={styles.transactionItemContainer} onPress={() => router.push({ pathname: "/(drawer)/transactionsDetail", params: { id: tx.id } })}>
                 <View style={styles.transactionItemRow}>
                   <View style={styles.transactionInfoContainer}>
                     {tx.type === "restock" ? (
@@ -420,7 +422,7 @@ const Transactions = () => {
                     {tx.price}ETB
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ))}
