@@ -41,6 +41,8 @@ const sampleProducts = [
   }
 ];
 
+
+
 export default function ProductDetails() {
   const { id } = useLocalSearchParams();
   const product = sampleProducts.find((p) => p.id === id);
