@@ -66,7 +66,7 @@ export default function Inventory() {
     return matchesSearch && matchesCategory;
   });
 
-  const renderProductCard = ({ item }) => {
+  const renderProductCard = ({ item }: { item: any }) => {
     return (
       <TouchableOpacity
         style={styles.productCard}

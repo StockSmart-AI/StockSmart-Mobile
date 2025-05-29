@@ -118,7 +118,9 @@ export default function Header() {
             <ChevronDown size={24} color={Colors.accent} />
           </Animated.View>
         </TouchableOpacity>
-        <Bell size={20} color={Colors.accent} />
+        <TouchableOpacity onPress={() => router.push("/(drawer)/notificationPage")}>
+          <Bell size={20} color={Colors.accent} />
+        </TouchableOpacity>
       </View>
       {showShopModal && (
         <Animated.View
@@ -130,7 +132,7 @@ export default function Header() {
             },
           ]}
         >
-          {shops.map((shop: String) => (
+          {shops.map((shop: string) => (
             <View key={shop} style={styles.listContainer}>
               <Text style={styles.listText}>{shop}</Text>
             </View>
