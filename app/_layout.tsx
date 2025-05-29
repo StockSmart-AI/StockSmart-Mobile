@@ -6,6 +6,7 @@ import { AuthProvider, AuthContext } from "@/context/AuthContext";
 import { useFonts } from "expo-font";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ShopProvider } from "@/context/ShopContext";
 
 //font loading
 import {
@@ -39,9 +40,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <MainNavigator />
-        </GestureHandlerRootView>
+        <ShopProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <MainNavigator />
+          </GestureHandlerRootView>
+        </ShopProvider>
       </AuthProvider>
     </ThemeProvider>
   );

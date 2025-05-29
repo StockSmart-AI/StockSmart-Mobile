@@ -101,7 +101,6 @@ export default function HomeScreen() {
         ]}
       >
         <HeroCard />
-
         {/* Action Buttons */}
         <View style={{ paddingVertical: 20, gap: 20 }}>
           <TouchableOpacity

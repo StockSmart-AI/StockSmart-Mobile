@@ -1,97 +1,114 @@
 //@ts-nocheck
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   FlatList,
+  KeyboardAvoidingView,
+  StyleSheet,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useShopCreation } from "@/context/ShopCreationContext";
-import { CircleMinus } from "lucide-react-native";
-import { Colors } from "@/constants/Theme";
+import { Colors, Fonts } from "@/constants/Theme";
 
-const AddEmployeesScreen = () => {
+const GrantRestockScreen = () => {
   const router = useRouter();
   const { shopDetails, setShopDetails } = useShopCreation();
-  const [email, setEmail] = useState("");
 
-  const mockDatabase = [
-    { email: "fanuelmaregu@gmail.com", name: "Fanuel Maregu" },
-    { email: "samirahassen@gmail.com", name: "Samira Hassen" },
-    { email: "teshomebalcha@gmail.com", name: "Teshome Balcha" },
-  ];
-
-  const addEmployee = () => {
-    if (email.trim() === "") return;
-    const employee = mockDatabase.find((emp) => emp.email === email) || {
-      name: email,
-      email,
-    };
-
-    if (!shopDetails.employees.includes(employee.email)) {
-      setShopDetails((prev) => ({
-        ...prev,
-        employees: [...prev.employees, employee.email],
-      }));
-    }
-    setEmail("");
-  };
-
-  const removeEmployee = (email: string) => {
+  const toggleRestockPermission = (employeeEmail: string) => {
     setShopDetails((prev) => ({
       ...prev,
-      employees: prev.employees.filter((emp) => emp !== email),
+      permissions: {
+        ...prev.permissions,
+        [employeeEmail]: !prev.permissions[employeeEmail], // Toggle permission
+      },
     }));
+  };
+
+  const getFirstName = (name: string, email: string) => {
+    if (name && name !== email) {
+      return name.split(" ")[0];
+    }
+    return email.split("@")[0];
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add your employees to the shop</Text>
-      <Text style={styles.label}>Employees' email</Text>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. example@gmail.com"
-          placeholderTextColor="#A0A0A0"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TouchableOpacity onPress={addEmployee}>
-          <Ionicons name="arrow-forward" size={24} color="#6AC28A" />
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.title}>Who has {`\n`}restock access</Text>
+      <Text style={styles.label}>
+        Choose employees who can manage restock requests.
+      </Text>
 
       <View style={styles.employeeList}>
-        <Text style={styles.subTitle}>Invitees</Text>
+        <Text style={styles.subTitle}>Employees</Text>
         {shopDetails.employees.length === 0 && (
-          <Text style={{ color: "#A0A0A0", marginTop: 20 }}>
-            No employees added yet
+          <Text
+            style={{
+              fontSize: 14,
+              fontFamily: Fonts.plusJakarta.regular,
+              color: Colors.secondary,
+              marginTop: 20,
+              alignSelf: "center",
+            }}
+          >
+            No employees added yet. Go back to add employees.
           </Text>
         )}
 
         <FlatList
           data={shopDetails.employees}
-          keyExtractor={(item) => item}
+          keyExtractor={(item) => item.email} // Use email as key
           renderItem={({ item }) => (
             <View style={styles.employeeCard}>
-              <Text style={styles.employeeName}>{item}</Text>
-              <TouchableOpacity onPress={() => removeEmployee(item)}>
-                <CircleMinus color={Colors.secondary} />
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: Colors.accent,
+                  borderRadius: 100,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: Fonts.outfit.semiBold,
+                    fontSize: 16,
+                    color: Colors.light,
+                  }}
+                >
+                  {(item.name === item.email
+                    ? item.email[0]
+                    : item.name[0]
+                  )?.toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.employeeName}>
+                {getFirstName(item.name, item.email)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => toggleRestockPermission(item.email)}
+                style={[
+                  styles.permissionButton,
+                  shopDetails.permissions[item.email]
+                    ? styles.permissionGranted
+                    : styles.permissionRevoked,
+                ]}
+              >
+                <Text style={styles.permissionButtonText}>
+                  {shopDetails.permissions[item.email] ? "Revoke" : "Grant"}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
         />
       </View>
 
-      <View style={styles.buttonContainer}>
+      <KeyboardAvoidingView style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.skipButton}
-          onPress={() => router.push("/grantRestock")}
+          onPress={() => router.push("/shopSummary")} // Update navigation target
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -101,72 +118,112 @@ const AddEmployeesScreen = () => {
             shopDetails.employees.length === 0 && styles.disabledButton,
           ]}
           disabled={shopDetails.employees.length === 0}
-          onPress={() => router.push("/grantRestock")}
+          onPress={() => router.push("/shopSummary")} // Update navigation target
         >
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "white", padding: 20 },
-  title: { fontSize: 24, fontWeight: "bold", color: "black" },
-  label: { fontSize: 16, color: "black", marginTop: 20 },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#EEF5F1",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginTop: 10,
-  },
-  input: { flex: 1, fontSize: 16, color: "#000", padding: 10 },
-  subTitle: { fontSize: 18, color: "black", marginTop: 10 },
-  employeeList: {
+  container: {
     flex: 1,
-    minHeight: "100%",
     backgroundColor: Colors.light,
-    borderRadius: 10,
-    padding: 30,
-    marginTop: 20,
-    shadowColor: "#000",
+    padding: 20,
+    // Removed justifyContent: "space-between" to allow natural flow if content is less
+  },
+  title: {
+    fontSize: 32,
+    fontFamily: Fonts.outfit.semiBold,
+    color: Colors.text,
+    marginBottom: 10, // Added margin for spacing
+  },
+  label: {
+    fontSize: 16, // Adjusted size
+    fontFamily: Fonts.outfit.regular, // Adjusted font
+    color: Colors.textSecondary, // Adjusted color
+    marginBottom: 20, // Added margin
+  },
+  // Remove inputContainer and input styles as they are no longer used
+  subTitle: {
+    fontSize: 20,
+    fontFamily: Fonts.outfit.medium, // Adjusted font
+    color: Colors.text,
+    // marginTop: 10, // Adjusted from original
+    marginBottom: 16,
+  },
+  employeeList: {
+    flex: 1, // Allow list to take available space
+    backgroundColor: Colors.light,
+    // height: "45%", // Removed fixed height, let it be flexible
+    borderRadius: 18,
+    padding: 24,
+    marginTop: 10, // Adjusted margin
+    shadowColor: Colors.text,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.08,
     shadowRadius: 5,
-    elevation: 5,
+    elevation: 3,
   },
   employeeCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 12, // Increased padding
+    borderBottomWidth: 1, // Add separator
+    borderBottomColor: Colors.primary,
   },
-  employeeName: { flex: 1, marginLeft: 10, fontSize: 16, color: "#000" },
+  employeeName: {
+    flex: 1,
+    marginLeft: 12, // Increased margin
+    fontSize: 16, // Adjusted size
+    color: Colors.text,
+    fontFamily: Fonts.outfit.regular,
+  },
+  permissionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  permissionGranted: {
+    backgroundColor: Colors.secondary, // Example: Red for revoke
+  },
+  permissionRevoked: {
+    backgroundColor: Colors.accent, // Example: Green for grant
+  },
+  permissionButtonText: {
+    color: Colors.light,
+    fontSize: 14,
+    fontFamily: Fonts.outfit.medium,
+  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 80,
+    marginTop: 20, // Adjusted margin
+    paddingVertical: 10, // Add padding for buttons at the bottom
   },
   skipButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "black",
+    borderColor: Colors.text,
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: "center",
   },
-  skipText: { fontSize: 16, color: "black" },
+  skipText: { fontSize: 16, color: Colors.text },
   continueButton: {
     flex: 1,
-    backgroundColor: "#6AC28A",
+    backgroundColor: Colors.accent,
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: "center",
     marginLeft: 10,
   },
-  continueText: { fontSize: 16, color: "#fff", fontWeight: "bold" },
-  disabledButton: { backgroundColor: "#B0C4B1" },
+  continueText: { fontSize: 16, color: Colors.light, fontWeight: "bold" },
+  disabledButton: { backgroundColor: Colors.secondary },
 });
 
-export default AddEmployeesScreen;
+export default GrantRestockScreen;
