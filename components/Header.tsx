@@ -136,7 +136,11 @@ export default function Header() {
             <ChevronDown size={24} color={Colors.accent} />
           </Animated.View>
         </TouchableOpacity>
-        <Bell size={20} color={Colors.accent} />
+        <TouchableOpacity
+          onPress={() => router.push("/(drawer)/notificationPage")}
+        >
+          <Bell size={20} color={Colors.accent} />
+        </TouchableOpacity>
       </View>
       {showShopModal && (
         <Animated.View

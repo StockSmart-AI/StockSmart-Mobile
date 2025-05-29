@@ -60,6 +60,7 @@ export default function SignIn() {
             onChangeText={setPassword}
             secureTextEntry={true}
           />
+          <Text style={styles.forgotPasswordText}>Forgot Password</Text>
         </View>
         <View style={styles.container2}>
           <TouchableOpacity
@@ -113,6 +114,13 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 32,
     marginBottom: 24,
+  },
+  forgotPasswordText: {
+    fontFamily: Fonts.plusJakarta.regular,
+    color: Colors.secondary,
+    fontSize: 15,
+    marginBottom: 16,
+    paddingLeft: 12,
   },
   container2: {
     gap: 16,

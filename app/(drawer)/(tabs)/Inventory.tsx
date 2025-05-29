@@ -66,7 +66,7 @@ export default function Inventory() {
     return matchesSearch && matchesCategory;
   });
 
-  const renderProductCard = ({ item }) => {
+  const renderProductCard = ({ item }: { item: any }) => {
     return (
       <TouchableOpacity
         style={styles.productCard}
@@ -139,7 +139,10 @@ export default function Inventory() {
         renderItem={renderProductCard}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        contentContainerStyle={styles.productGrid}
+        contentContainerStyle={[
+          styles.productGrid,
+          { paddingTop: 0, flexGrow: 0 }
+        ]}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -169,7 +172,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.publicSans.regular,
   },
   categoriesContainer: {
-    marginBottom: 20,
+    marginBottom: 4,
   },
   categoriesContent: {
     paddingRight: 16,
