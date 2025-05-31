@@ -94,17 +94,23 @@ export default function HeroCard() {
           alignItems: "flex-end",
         }}
       >
-        <TouchableOpacity style={styles.heroButton} activeOpacity={0.5}>
+        <TouchableOpacity 
+          style={styles.heroButton} 
+          activeOpacity={0.5}
+          onPress={() => router.push({
+            pathname: "/(drawer)/(tabs)/Inventory",
+            params: { source: 'restock' }
+          })}        
+        >
           <PackagePlus size={24} color={Colors.text} strokeWidth={1.5} />
           <Text style={styles.buttonText}>Restock</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.heroButton}
           activeOpacity={0.6}
-          onPress={() => router.push("/(drawer)/(stock)/sell")}
+          onPress={() => router.push("/sell")}
         >
           <ShoppingCart size={24} color={Colors.text} strokeWidth={1.5} />
-
           <Text style={styles.buttonText}>Sell</Text>
         </TouchableOpacity>
       </View>

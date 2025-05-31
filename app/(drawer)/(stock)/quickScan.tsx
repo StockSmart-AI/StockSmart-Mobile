@@ -10,8 +10,6 @@ import Scanner from "@/components/Scanner";
 
 export default function QuickScan() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [scanned, setScanned] = useState(false);
-  const [data, setData] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
 
   useEffect(() => {
@@ -21,11 +19,6 @@ export default function QuickScan() {
     })();
   }, []);
 
-  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
-    setScanned(true);
-    setData(data);
-    router.push("/productDetails");
-  };
 
   const toggleFlash = () => {
     setFlash((current) => !current);
@@ -37,7 +30,7 @@ export default function QuickScan() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace('/(drawer)/(tabs)')}>
           <ArrowLeft size={32} color={Colors.accent} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={{ fontFamily: Fonts.outfit.medium, fontSize: 20 }}>
@@ -46,7 +39,7 @@ export default function QuickScan() {
         <ArrowLeft size={32} color={"transparent"} strokeWidth={1.5} />
       </View>
 
-      <Scanner />
+      <Scanner type="quick"/>
 
       <View
         style={{

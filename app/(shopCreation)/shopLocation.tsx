@@ -11,12 +11,14 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Colors, Fonts } from "@/constants/Theme";
+import { useShopCreation, Employee } from "@/context/ShopCreationContext";
 
 const ShopLocationScreen = () => {
   const router = useRouter();
-  const [street, setStreet] = useState("");
-  const [building, setBuilding] = useState("");
-  const [unit, setUnit] = useState("");
+  const { shopDetails, setShopDetails } = useShopCreation();
+  const [street, setStreet] = useState(shopDetails.street || "");
+  const [building, setBuilding] = useState(shopDetails.building || "");
+  const [unit, setUnit] = useState(shopDetails.unit || "");
 
   return (
     <View style={styles.container}>
@@ -60,9 +62,15 @@ const ShopLocationScreen = () => {
           styles.button,
           !street && !building && !unit && styles.disabledButton,
         ]}
-        disabled={!street && !building && !unit}
+        disabled={!street || !building || !unit}
         onPress={() => {
           if (street && building && unit) {
+            setShopDetails((prev) => ({
+              ...prev,
+              street: street.trim(),
+              building: building.trim(),
+              unit: unit.trim(),
+            }));
             router.push("/addEmployee");
           }
         }}

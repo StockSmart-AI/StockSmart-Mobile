@@ -108,7 +108,7 @@ export default function HomeScreen() {
               styles.buttonStyle,
               { borderRadius: 100, borderColor: Colors.text },
             ]}
-            onPress={() => router.push("/quickScan")}
+            onPress={() => router.replace("/quickScan")}
           >
             <ScanBarcode size={24} color={Colors.text} strokeWidth={1.5} />
             <Text style={[styles.buttonText, { color: Colors.text }]}>
@@ -118,12 +118,12 @@ export default function HomeScreen() {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.buttonStyle}
-              onPress={() => router.push("/(drawer)/(stock)/newProduct")}
+              onPress={() => router.replace("/(drawer)/(stock)/newProduct")}
             >
               <SquarePlus size={24} color={Colors.accent} strokeWidth={1.5} />
-              <Text style={styles.buttonText}>New Item</Text>
+              <Text style={styles.buttonText}>New Product</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonStyle}>
+            <TouchableOpacity style={styles.buttonStyle} onPress={() => router.replace("/(drawer)/(stock)/sell")}>
               <SquareMinus size={24} color={Colors.accent} strokeWidth={1.5} />
               <Text style={styles.buttonText}>Delete Item</Text>
             </TouchableOpacity>

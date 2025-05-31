@@ -11,7 +11,7 @@ export default function Sell() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace('/(drawer)/(tabs)')}>
           <ArrowLeft size={32} color={Colors.accent} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={{ fontFamily: Fonts.outfit.medium, fontSize: 20 }}>
@@ -20,7 +20,7 @@ export default function Sell() {
         <ArrowLeft size={32} color={"transparent"} strokeWidth={1.5} />
       </View>
 
-      <Scanner />
+      <Scanner type="sell"/>
 
       <View
         style={{

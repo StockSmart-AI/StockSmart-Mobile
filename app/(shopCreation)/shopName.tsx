@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Colors, Fonts } from "@/constants/Theme";
+import { useShopCreation, Employee } from "@/context/ShopCreationContext";
 
 const ShopNameScreen = () => {
   const router = useRouter();
-  const [shopName, setShopName] = useState("");
+  const { shopDetails, setShopDetails } = useShopCreation();
+  const [shopName, setShopName] = useState(shopDetails.shopName || "");
 
   return (
     <View style={styles.container}>
@@ -40,6 +42,7 @@ const ShopNameScreen = () => {
         disabled={!shopName}
         onPress={() => {
           if (shopName) {
+            setShopDetails((prev) => ({ ...prev, shopName: shopName.trim() }));
             router.push("/shopLocation");
           }
         }}

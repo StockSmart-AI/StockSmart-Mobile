@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet } from "react-native";
@@ -14,79 +15,59 @@ import { useRouter } from "expo-router";
 import { useShopCreation, Employee } from "@/context/ShopCreationContext"; // Import Employee type
 import { Colors, Fonts } from "@/constants/Theme";
 import { CircleMinus } from "lucide-react-native";
-import { getAllUsers } from "@/api/user"; // Import the API function
+import { getAllUsers, getUserByEmail } from "@/api/user"; // Import the API function
 import { AuthContext } from "@/context/AuthContext"; // Import AuthContext
+import SnackBar from "@/components/ui/Snackbar";
 
 const AddEmployeesScreen = () => {
   const router = useRouter();
   const { shopDetails, setShopDetails } = useShopCreation();
   const [email, setEmail] = useState("");
-  const [allUsers, setAllUsers] = useState<Employee[]>([]); // Store fetched users
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const { token } = useContext(AuthContext); // Get token from AuthContext
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const { token } = useContext(AuthContext);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!token) {
-        setFetchError("Authentication token not found.");
-        return;
-      }
-      setIsLoadingUsers(true);
-      setFetchError(null);
-      try {
-        const response = await getAllUsers(token);
-        if (response && response.data) {
-          // Assuming response.data is an array of user objects { email, name, ... }
-          const formattedUsers = response.data.map((user: any) => ({
-            email: user.email,
-            name: user.name,
-          }));
-          setAllUsers(formattedUsers);
-        }
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        setFetchError("Failed to load users. Please try again.");
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-
-    fetchUsers();
-  }, [token]);
-
-  const addEmployee = () => {
+  const addEmployee = async () => {
     if (email.trim() === "") return;
-    // Find employee in the fetched list of users
-    const existingEmployee = allUsers.find(
-      (user) => user.email.toLowerCase() === email.trim().toLowerCase()
-    );
+    Keyboard.dismiss();
 
-    const employeeToAdd: Employee = existingEmployee
-      ? { name: existingEmployee.name, email: existingEmployee.email }
-      : { name: email.trim(), email: email.trim() }; // If not found, use email as name
+    try {
+      const response = await getUserByEmail(token, email.trim());
+      
+      if (response && response.data) {
+        const userData = response.data;
+        const employeeToAdd: Employee = {
+          name: userData.name.split(' ')[0], // Get only the first name
+          email: userData.email
+        };
 
-    if (
-      !shopDetails.employees.find(
-        (emp) => emp.email.toLowerCase() === employeeToAdd.email.toLowerCase()
-      )
-    ) {
-      setShopDetails((prev) => ({
-        ...prev,
-        employees: [...prev.employees, employeeToAdd],
-      }));
+        if (!shopDetails.employees.find(
+          (emp) => emp.email.toLowerCase() === employeeToAdd.email.toLowerCase()
+        )) {
+          setShopDetails((prev) => ({
+            ...prev,
+            employees: [...prev.employees, employeeToAdd],
+          }));
+          setEmail("");
+        } else {
+          setSnackbarMessage("Employee already added");
+          setShowSnackbar(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      setSnackbarMessage("User not found check the email.");
+      setShowSnackbar(true);
     }
-    setEmail(""); // Clear input field
   };
 
   const removeEmployee = (employeeEmail: string) => {
     setShopDetails((prev) => ({
       ...prev,
       employees: prev.employees.filter((emp) => emp.email !== employeeEmail),
-      // Also remove permissions for the removed employee
       permissions: {
         ...prev.permissions,
-        [employeeEmail]: undefined, // Or delete prev.permissions[employeeEmail]
+        [employeeEmail]: undefined,
       },
     }));
   };
@@ -110,8 +91,6 @@ const AddEmployeesScreen = () => {
           <Ionicons name="arrow-forward" size={24} color="#6AC28A" />
         </TouchableOpacity>
       </View>
-      {isLoadingUsers && <Text style={styles.loadingText}>Loading users...</Text>}
-      {fetchError && <Text style={styles.errorText}>{fetchError}</Text>}
 
       <View style={styles.employeeList}>
         <Text style={styles.subTitle}>Invitees</Text>
@@ -131,7 +110,7 @@ const AddEmployeesScreen = () => {
 
         <FlatList
           data={shopDetails.employees}
-          keyExtractor={(item) => item.email} // Use email as key
+          keyExtractor={(item) => item.email}
           renderItem={({ item }) => (
             <View style={styles.employeeCard}>
               <View
@@ -151,15 +130,10 @@ const AddEmployeesScreen = () => {
                     color: Colors.light,
                   }}
                 >
-                  {/* Use first letter of name, or email if name is email */}
-                  {(item.name === item.email
-                    ? item.email[0]
-                    : item.name[0]
-                  )?.toUpperCase()}
+                  {item.name[0]?.toUpperCase()}
                 </Text>
               </View>
-              {/* Display email in this list, or name if preferred */}
-              <Text style={styles.employeeName}>{item.email}</Text>
+              <Text style={styles.employeeName}>{item.name}</Text>
               <TouchableOpacity onPress={() => removeEmployee(item.email)}>
                 <CircleMinus
                   color={Colors.secondary}
@@ -175,7 +149,7 @@ const AddEmployeesScreen = () => {
       <KeyboardAvoidingView style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.skipButton}
-          onPress={() => router.push("/grantRestock")} // Ensure skip also navigates correctly
+          onPress={() => router.push("/buildShop")}
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -185,11 +159,19 @@ const AddEmployeesScreen = () => {
             shopDetails.employees.length === 0 && styles.disabledButton,
           ]}
           disabled={shopDetails.employees.length === 0}
-          onPress={() => router.push("/grantRestock")}
+          onPress={() => router.push("/buildShop")}
         >
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+
+      {showSnackbar && (
+        <SnackBar
+          type="error"
+          message={snackbarMessage}
+          onClose={() => setShowSnackbar(false)}
+        />
+      )}
     </View>
   );
 };
@@ -232,6 +214,7 @@ const styles = StyleSheet.create({
   employeeList: {
     flexShrink: 0,
     backgroundColor: Colors.light,
+    minHeight: 200,
     height: "45%",
     borderRadius: 18,
     padding: 24,
@@ -278,18 +261,6 @@ const styles = StyleSheet.create({
   },
   continueText: { fontSize: 16, color: Colors.light, fontWeight: "bold" },
   disabledButton: { backgroundColor: Colors.secondary },
-  loadingText: {
-    textAlign: "center",
-    marginTop: 10,
-    fontFamily: Fonts.plusJakarta.regular,
-    color: Colors.secondary,
-  },
-  errorText: {
-    textAlign: "center",
-    marginTop: 10,
-    fontFamily: Fonts.plusJakarta.regular,
-    color: "red",
-  },
 });
 
 export default AddEmployeesScreen;

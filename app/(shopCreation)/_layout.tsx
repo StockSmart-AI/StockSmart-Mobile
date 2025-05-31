@@ -111,8 +111,9 @@ export default function RootLayout() {
             name="sendInvitation"
             options={{ headerShown: false }}
           />
-
-          <Stack.Screen name="+not-found" />
+          <Stack.Screen
+            name="buildShop"
+            options={{headerShown: false}}/>
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

@@ -25,6 +25,15 @@ interface SummaryCardProps {
   styles: any; // Replace 'any' with a more specific styles type if available
 }
 
+interface PieChartItem {
+  name: string;
+  population: number;
+  color: string;
+  legendFontColor: string;
+  legendFontSize: number;
+  percentage: number;
+}
+
 interface StockCriticalProductItemProps {
   product: {
     name: string;
@@ -81,6 +90,15 @@ interface CarouselItem {
   chartData: any;
 }
 
+// Calculate total population for percentage calculation
+const calculatePercentages = (data: Omit<PieChartItem, 'percentage'>[]): PieChartItem[] => {
+  const total = data.reduce((sum, item) => sum + item.population, 0);
+  return data.map(item => ({
+    ...item,
+    percentage: total === 0 ? 0 : Math.round((item.population / total) * 100)
+  }));
+};
+
 // Sample data for charts
 const lineChartData = {
   labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -98,36 +116,38 @@ const lineChartData = {
   ],
 };
 
-const pieChartData = [
+const rawPieChartData = [
   {
     name: "Cosmetics",
     population: 215,
-    color: "#1f77b4",
+    color: "#7ED1A7",
     legendFontColor: Colors.text,
     legendFontSize: 15,
   },
   {
     name: "Processed food",
     population: 280,
-    color: "#2ca02c",
+    color: "#3A8C6C",
     legendFontColor: Colors.text,
     legendFontSize: 15,
   },
   {
     name: "Dairy Products",
     population: 853,
-    color: "#ff7f0e",
+    color: "#A5E6C9",
     legendFontColor: Colors.text,
     legendFontSize: 15,
   },
   {
     name: "Beverages",
     population: 100,
-    color: "#d62728",
+    color: "#2D4A3B",
     legendFontColor: Colors.text,
     legendFontSize: 15,
   },
 ];
+
+const pieChartData: PieChartItem[] = calculatePercentages(rawPieChartData);
 
 const barChartData = {
   labels: ["Mon", "Tue", "Wed", "Today", "Fri"],
@@ -198,17 +218,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ value, label, trend, chartCon
   <View style={styles.summaryCard}>
     <Text style={styles.summaryValue}>{value}</Text>
     <Text style={styles.summaryLabel}>{label}</Text>
-    <LineChart
-      data={chartData}
-      width={screenWidth * 0.4}
-      height={60}
-      chartConfig={chartConfig}
-      withHorizontalLabels={false}
-      withVerticalLabels={false}
-      withDots={false}
-      bezier
-      style={styles.chartStyle}
-    />
     <Text style={styles.summaryTrend}>{trend}</Text>
   </View>
 );
@@ -235,16 +244,24 @@ const CategoryDistributionChart = ({ chartConfig }: { chartConfig: any }) => (
     <Text style={styles.chartTitle}>Category Distribution</Text>
     <PieChart
       data={pieChartData}
-      width={screenWidth * 0.6}
-      height={150}
+      width={screenWidth * 0.8}
+      height={200}
       chartConfig={chartConfig}
       accessor={"population"}
       backgroundColor={"transparent"}
-      
       paddingLeft={"10"}
-      absolute
+      center={[screenWidth * 0.2, 0]}
       style={styles.chartStyle}
+      hasLegend={false}
     />
+    <View style={styles.legendGrid}>
+      {pieChartData.map((item, index) => (
+        <View key={index} style={styles.legendItem}>
+          <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+          <Text style={styles.legendText}>{item.name} ({item.percentage}%)</Text>
+        </View>
+      ))}
+    </View>
   </View>
 );
 
@@ -275,19 +292,6 @@ const StockCriticalProductItem: React.FC<StockCriticalProductItemProps> = ({ pro
         <Text style={styles.productStock}>Stock: {product.stock}</Text>
         {product.lowStock && <Text style={styles.lowStockLabel}>Low stock</Text>}
       </View>
-      <View style={styles.criticalProductChart}>
-        <LineChart
-          data={product.chartData}
-          width={80}
-          height={40}
-          chartConfig={chartConfig}
-          withHorizontalLabels={false}
-          withVerticalLabels={false}
-          withDots={false}
-          bezier
-          style={styles.chartStyle}
-        />
-      </View>
     </View>
 );
 
@@ -302,6 +306,7 @@ const StockCriticalProducts: React.FC<StockCriticalProductsProps> = ({ criticalP
           dot={<View style={styles.dot} />}
           activeDot={<View style={styles.activeDot} />}
           loop
+            style={{}}
         >
           {criticalProductsData.map((product, index) => (
             <View key={index} style={styles.criticalProductCard}>
@@ -544,10 +549,10 @@ const styles = StyleSheet.create({
   summaryCard: {
     width: "48%",
     backgroundColor: Colors.light,
-    borderRadius: 8,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 10,
-    elevation: 2,
+    elevation: 3,
   },
   summaryValue: {
     fontSize: 20,
@@ -573,8 +578,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 20,
-    elevation: 2,
-    
+    elevation: 3,
   },
   chartTitle: {
     fontSize: 18,
@@ -588,12 +592,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   criticalProductsContainer: {
+  height: 250,
     backgroundColor: Colors.light,
     borderRadius: 8,
-    padding: 16,
-    elevation: 2,
-    marginBottom: 20,
-    paddingBottom:80,
+    marginBottom: 80,
   },
   swiperContainer:{
     flex: 1,
@@ -630,7 +632,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light,
     borderRadius: 8,
     elevation: 2,
-    height: '100%',
     
   },
   productImagePlaceholder: {
@@ -737,6 +738,31 @@ const styles = StyleSheet.create({
   },
   criticalProductChart: {
     marginLeft: 12,
+  },
+  legendGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%', // Slightly less than 50% to account for spacing
+    marginBottom: 12,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  legendText: {
+    fontSize: 14,
+    fontFamily: Fonts.publicSans.regular,
+    color: Colors.text,
+    flex: 1,
   },
 });
 

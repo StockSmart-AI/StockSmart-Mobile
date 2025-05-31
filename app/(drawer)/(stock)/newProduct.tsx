@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   ScrollView,
   View,
@@ -9,6 +9,8 @@ import {
   ColorValue,
   Platform,
   Image,
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { router } from "expo-router";
 import {
@@ -31,6 +33,9 @@ import {
 import { Colors, Fonts } from "@/constants/Theme";
 import * as ImagePicker from "expo-image-picker";
 import AlertThresholdSlider from "@/components/ThresholdSlider";
+import { AuthContext } from "@/context/AuthContext";
+import { useShop } from "@/context/ShopContext";
+import { addProduct } from "@/api/stock";
 
 const categories = [
   {
@@ -100,6 +105,11 @@ export default function NewProduct() {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  const { token } = useContext(AuthContext);
+  const { currentShop } = useShop();
 
   const pickImage = async () => {
     const permissionResult =
@@ -120,10 +130,74 @@ export default function NewProduct() {
     }
   };
 
+  const handleSubmit = async () => {
+    if (!token || !currentShop?.id) {
+      setSubmissionError("Authentication or shop information missing.");
+      return;
+    }
+
+    if (!name || !price || !selectedCategory || !image) {
+      setSubmissionError("Please fill in all required fields (Name, Price, Category, Image).");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmissionError(null);
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("price", parseFloat(price).toFixed(2));
+    formData.append("category", selectedCategory);
+    formData.append("is_serialized", isSerialized.toString());
+    formData.append("description", description);
+    formData.append("shop_id", currentShop.id);
+    formData.append("threshold", threshold.toString());
+
+    if (image) {
+      const uriParts = image.split(".");
+      const fileType = uriParts[uriParts.length - 1];
+      const imageName = `product_${Date.now()}.${fileType}`;
+      const file = {
+        uri: image,
+        name: imageName,
+        type: `image/${fileType}`,
+      } as any;
+      formData.append("image", file);
+    }
+
+    try {
+      const response = await addProduct(token, formData);
+      if (response && response.data && response.data.product_id) {
+        const newProductId = response.data.product_id;
+        router.replace({ pathname: '/(drawer)/(stock)/newProductSuccess', params: { productId: newProductId } });
+      } else {
+        console.log("Unexpected response structure:", response);
+        setSubmissionError(response?.data?.error || "Failed to add product: Unexpected response from server.");
+      }
+    } catch (err: any) {
+      console.error("Error adding product:", err);
+      let errorMessage = "An unexpected error occurred while adding the product.";
+      if (err.response) {
+        if (err.response.data && err.response.data.error) {
+          errorMessage = `Error: ${err.response.data.error}`;
+        } else if (err.response.status) {
+           errorMessage = `Request failed with status code ${err.response.status}.`;
+        } else {
+           errorMessage = "An error occurred with the response.";
+        }
+      } else if (err.request) {
+        errorMessage = "No response received from the server. Please check your network connection.";
+      }
+      setSubmissionError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace('/(drawer)/(tabs)')}>
           <ArrowLeft size={32} color={Colors.accent} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={{ fontFamily: Fonts.outfit.medium, fontSize: 20 }}>
@@ -155,6 +229,7 @@ export default function NewProduct() {
               placeholder="Price"
               value={price}
               onChangeText={setPrice}
+              keyboardType="numeric"
             />
           </View>
         </View>
@@ -350,58 +425,26 @@ export default function NewProduct() {
         </View>
         <View style={{ gap: 16 }}>
           <TouchableOpacity
-            style={{
-              borderRadius: 18,
-              paddingHorizontal: 32,
-              paddingVertical: 16,
-              borderStyle: "dashed",
-              borderWidth: 1,
-              borderColor: Colors.text,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
+            style={styles.imageUploadButton}
             onPress={pickImage}
           >
-            <Text style={{ fontSize: 16, fontFamily: Fonts.publicSans.medium }}>
-              Upload Image
-            </Text>
+            <Text style={styles.imageUploadButtonText}>Upload Image</Text>
             <ImagePlus size={24} color={Colors.text} />
           </TouchableOpacity>
           <View>
             {image && (
               <View
-                style={{
-                  width: "100%",
-                  aspectRatio: 1.3,
-                  backgroundColor: Colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 24,
-                  overflow: "hidden",
-                }}
+                style={styles.uploadedImageContainer}
               >
                 <TouchableOpacity
-                  style={{
-                    position: "absolute",
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    zIndex: 10,
-                    padding: 6,
-                    borderRadius: 200,
-                    top: 16,
-                    right: 16,
-                  }}
+                  style={styles.removeImageButton}
                   onPress={() => setImage("")}
                 >
                   <X color={Colors.light} size={24} strokeWidth={1.5} />
                 </TouchableOpacity>
                 <Image
                   source={{ uri: image }}
-                  style={{
-                    resizeMode: "contain",
-                    height: "100%",
-                    width: "100%",
-                  }}
+                  style={styles.uploadedImage}
                 />
               </View>
             )}
@@ -411,10 +454,14 @@ export default function NewProduct() {
       <TouchableOpacity
         style={[
           styles.continueButton,
-          !image || !name || !price ? styles.disabledButton : {},
+          !image || !name || !price || isSubmitting ? styles.disabledButton : {},
         ]}
-        disabled={!image || !name || !price}
+        disabled={!image || !name || !price || isSubmitting}
+        onPress={handleSubmit}
       >
+        {isSubmitting ? (
+          <ActivityIndicator color={Colors.light} />
+        ) : (
         <Text
           style={{
             fontFamily: Fonts.plusJakarta.medium,
@@ -424,7 +471,11 @@ export default function NewProduct() {
         >
           Create Product
         </Text>
+        )}
       </TouchableOpacity>
+      {submissionError && (
+        <Text style={styles.errorText}>{submissionError}</Text>
+      )}
     </View>
   );
 }
@@ -504,6 +555,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  imageUploadButton: {
+    borderRadius: 18,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: Colors.text,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  imageUploadButtonText: {
+    fontSize: 16,
+    fontFamily: Fonts.publicSans.medium,
+  },
+  uploadedImageContainer: {
+    width: "100%",
+    aspectRatio: 1.3,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  removeImageButton: {
+    position: "absolute",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 10,
+    padding: 6,
+    borderRadius: 200,
+    top: 16,
+    right: 16,
+  },
+  uploadedImage: {
+    resizeMode: "contain",
+    height: "100%",
+    width: "100%",
+  },
   continueButton: {
     backgroundColor: "#7ED1A7",
     borderRadius: 48,
@@ -515,5 +604,12 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: Colors.secondary,
     opacity: 0.8,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 10,
+    fontFamily: Fonts.plusJakarta.regular,
+    fontSize: 14,
   },
 });

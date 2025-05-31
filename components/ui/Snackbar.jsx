@@ -7,6 +7,7 @@ import {
   Easing,
   Animated,
   Pressable,
+  Dimensions,
 } from "react-native";
 import { Fonts, Colors } from "@/constants/Theme";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
@@ -97,41 +98,52 @@ export default function SnackBar(props) {
   if (!isVisible) return null;
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        messageType[props.type].border,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
-    >
-      <View style={styles.messageContainer}>
-        {messageType[props.type].icon}
-        <Text style={[styles.message, messageType[props.type].text]}>
-          {props.message}
-        </Text>
-      </View>
-      <Pressable onPress={handleFadeOut}>
-        <AnimatedCircularProgress
-          ref={progressRef}
-          size={30}
-          width={1.5}
-          fill={counter * 10}
-          tintColor={Colors.accent}
-        >
-          {() => <X size={20} color={messageType[props.type].exit} />}
-        </AnimatedCircularProgress>
-      </Pressable>
-    </Animated.View>
+    <View style={styles.wrapper}>
+      <Animated.View
+        style={[
+          styles.container,
+          messageType[props.type].border,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        <View style={styles.messageContainer}>
+          {messageType[props.type].icon}
+          <Text style={[styles.message, messageType[props.type].text]}>
+            {props.message}
+          </Text>
+        </View>
+        <Pressable onPress={handleFadeOut}>
+          <AnimatedCircularProgress
+            ref={progressRef}
+            size={30}
+            width={1.5}
+            fill={counter * 10}
+            tintColor={messageType[props.type].exit}
+          >
+            {() => <X size={20} color={messageType[props.type].exit} />}
+          </AnimatedCircularProgress>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: Dimensions.get('window').height,
+    pointerEvents: 'box-none',
+  },
   container: {
-    position: "fixed",
-    bottom: 80,
+    position: "absolute",
+    bottom: 120,
     width: "90%",
     alignSelf: "center",
     padding: 16,
@@ -160,7 +172,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontFamily: Fonts.plusJakarta.medium,
-    fontSize: 15,
+    fontSize: 13,
     color: Colors.secondary,
   },
 });
