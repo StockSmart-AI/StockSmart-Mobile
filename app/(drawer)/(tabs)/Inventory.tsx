@@ -30,12 +30,19 @@ interface Product {
   image_url: string;
 }
 
-const categories = ["Baby Products", "Cosmetics", "Processed Food"];
+const categories = [
+  "Dairy",
+  "Beverage",
+  "Processed Food",
+  "Baby Products",
+  "Cleaning Agents",
+  "Cosmetics"
+];
 
 export default function Inventory() {
   const { token } = useContext(AuthContext);
   const { currentShop } = useShop();
-  const { source } = useLocalSearchParams();
+  const { source, selectedCategory } = useLocalSearchParams();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -58,6 +65,12 @@ export default function Inventory() {
       fetchProducts(page);
     }
   }, [page, isRefreshing]);
+
+  useEffect(() => {
+    if (selectedCategory && typeof selectedCategory === 'string') {
+      setSelectedCategories([selectedCategory]);
+    }
+  }, [selectedCategory]);
 
   const fetchProducts = async (currentPage: number) => {
     if (!token || !currentShop?.id) {
@@ -100,6 +113,7 @@ export default function Inventory() {
         setIsLoading(false);
       } else if (isRefreshing) {
         setIsRefreshing(false);
+        setIsLoading(false);
       } else {
         setIsFetchingMore(false);
       }
@@ -117,6 +131,7 @@ export default function Inventory() {
       setPage(1);
       setProducts([]);
       setIsRefreshing(true);
+      setIsLoading(true);
     }
   };
 
@@ -237,6 +252,14 @@ export default function Inventory() {
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          ListHeaderComponent={() => (
+            isRefreshing ? (
+              <View style={styles.refreshIndicator}>
+                <ActivityIndicator size="small" color={Colors.accent} />
+                <Text style={styles.refreshText}>Refreshing...</Text>
+              </View>
+            ) : null
+          )}
           ListFooterComponent={renderFooter}
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
@@ -368,6 +391,18 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderTopWidth: 1,
     borderColor: Colors.primary,
+  },
+  refreshIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  refreshText: {
+    fontFamily: Fonts.publicSans.regular,
+    fontSize: 14,
+    color: Colors.secondary,
   },
 });
 

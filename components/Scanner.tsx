@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useContext } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Svg, { Path } from "react-native-svg";
 import {
   View,
@@ -20,24 +20,12 @@ import { router } from "expo-router";
 import { BarcodeScanningResult } from "expo-camera";
 import { CameraView, Camera } from "expo-camera";
 import Cart from "@/components/Cart";
-import { getProductByBarcode } from "@/api/stock";
-import * as SecureStore from "expo-secure-store";
-import { AuthContext } from "@/context/AuthContext";
-import { useShop } from "@/context/ShopContext";
-import SnackBar from "@/components/ui/Snackbar";
 
-interface ScannerProps {
-  type: 'quick' | 'sell' | 'restock';
-}
-
-const Scanner = (props: ScannerProps) => {
+const Scanner = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [data, setData] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
-  const [error, setError] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
-  const { token } = useContext(AuthContext);
-  const { currentShop } = useShop();
 
   useEffect(() => {
     (async () => {
@@ -46,53 +34,10 @@ const Scanner = (props: ScannerProps) => {
     })();
   }, []);
 
-  const handleBarCodeScanned = async ({ type, data }: BarcodeScanningResult) => {
+  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
     setScanned(true);
     setData(data);
-    
-    try {
-      if (!token) {
-        setError({ message: "Authentication required. Please login again.", type: "error" });
-        return;
-      }
-
-      if (!currentShop?.id) {
-        setError({ message: "No shop selected. Please select a shop first.", type: "error" });
-        return;
-      }
-
-      const response = await getProductByBarcode(token, data, currentShop.id);
-      
-      if (!response.data) {
-        setError({ message: "Product not found. Please add the product first.", type: "error" });
-        return;
-      }
-
-      const productId = response.data.id;
-
-      if (props.type === 'quick') {
-        router.push({
-          pathname: "/productDetails",
-          params: { barcode: data, id: productId }
-        });
-      } else if (props.type === 'sell') {
-        router.push({
-          pathname: "/sell",
-          params: { barcode: data, id: productId }
-        });
-      } 
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      setError({ 
-        message: "Product not found. Scan again.", 
-        type: "error" 
-      });
-    }
-  };
-
-  const handleSnackbarClose = () => {
-    setError(null);
-    setScanned(false); // Reset scanned state to allow scanning again
+    router.push("/productDetails");
   };
 
   const toggleFlash = () => {
@@ -224,13 +169,6 @@ const Scanner = (props: ScannerProps) => {
           Torch
         </Text>
       </TouchableOpacity>
-      {error && (
-        <SnackBar
-          type={error.type}
-          message={error.message}
-          onClose={handleSnackbarClose}
-        />
-      )}
     </View>
   );
 };

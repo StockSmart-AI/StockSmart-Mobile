@@ -143,7 +143,14 @@ export default function HomeScreen() {
           </Text>
           <View style={styles.categoryContainer}>
             {categories.map((category, index) => (
-              <TouchableOpacity key={index} style={styles.categoryItem}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.categoryItem}
+                onPress={() => router.push({
+                  pathname: "/(drawer)/(tabs)/Inventory",
+                  params: { selectedCategory: category.name }
+                })}
+              >
                 {category.icon}
                 <View>
                   <Text

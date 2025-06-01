@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { Colors, Fonts } from "@/constants/Theme";
-import { getProductById } from "@/api/stock";
+import { getProductById, restockProducts } from "@/api/stock";
 import { AuthContext } from "@/context/AuthContext";
-import { ArrowLeft, Minus, Plus, Scan, ChevronUp } from "lucide-react-native";
+import { ArrowLeft, Minus, Plus, Scan, ChevronUp, X, Barcode } from "lucide-react-native";
+import { RestockScanner } from "@/components/RestockScanner";
+import { useShop } from "@/context/ShopContext";
 
 interface Product {
   id: string;
@@ -18,6 +20,11 @@ interface Product {
   image_url: string;
 }
 
+interface BarcodeItem {
+  barcode: string;
+  timestamp: number;
+}
+
 export default function Restock() {
   const { id } = useLocalSearchParams();
   const { token } = useContext(AuthContext);
@@ -26,6 +33,11 @@ export default function Restock() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [quantityInput, setQuantityInput] = useState("1");
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [barcodeItems, setBarcodeItems] = useState<BarcodeItem[]>([]);
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {currentShop} = useShop()
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -87,6 +99,80 @@ export default function Restock() {
     // You would typically add the item to a cart or process the sale here.
   };
 
+  const handleAddBarcode = () => {
+    if (barcodeInput.trim()) {
+      if (!barcodeItems.some(item => item.barcode === barcodeInput.trim())) {
+        setBarcodeItems(prev => [...prev, {
+          barcode: barcodeInput.trim(),
+          timestamp: Date.now() + Math.random(),
+        }]);
+        setBarcodeInput("");
+      } else {
+        console.log("Barcode already exists in the list.");
+      }
+    }
+  };
+
+  const handleRemoveBarcode = (timestamp: number) => {
+    setBarcodeItems(prev => prev.filter(item => item.timestamp !== timestamp));
+  };
+
+  const handleOpenScanner = () => {
+    setIsScannerVisible(true);
+  };
+
+  const handleScannedBarcodes = (scannedData?: string[]) => {
+    if (scannedData && scannedData.length > 0) {
+      const newBarcodes = scannedData.filter(scannedBarcode => 
+        !barcodeItems.some(existingItem => existingItem.barcode === scannedBarcode)
+      );
+      const newBarcodeItems = newBarcodes.map(barcode => ({
+        barcode,
+        timestamp: Date.now() + Math.random(),
+      }));
+      setBarcodeItems(prev => [...prev, ...newBarcodeItems]);
+    }
+    setIsScannerVisible(false);
+  };
+
+  const handleConfirmRestock = async () => {
+    if (!product || !token) return;
+
+    try {
+      setIsSubmitting(true);
+      
+      const restockData = {
+        shop_id: currentShop?.id, 
+        product_id: product.id,
+        cost_price: product.price * quantity,
+        quantity: quantity,
+        barcodes: barcodeItems.map(item => item.barcode)
+      };
+
+      const response = await restockProducts(token, restockData);
+      
+      if (response.data.success) {
+        Alert.alert(
+          "Success",
+          "Products have been restocked successfully",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace({ pathname: '/(drawer)/(tabs)/Inventory', params: { source: 'restock' } })
+            }
+          ]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        error.message || "Failed to restock products. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -111,12 +197,12 @@ export default function Restock() {
           <ArrowLeft size={32} color={Colors.accent} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          Sell Product
+          Restock Product
         </Text>
         <View style={{ width: 32 }} />{/* Placeholder for alignment */}
       </View>
 
-      <ScrollView style={styles.scrollViewContainer}>
+      <ScrollView style={[styles.scrollViewContainer, { marginBottom: 80 }]}>
         <View style={styles.imageContainer}>
           <Image source={{ uri: product.image_url }} style={styles.productImage} resizeMode="contain" />
         </View>
@@ -162,33 +248,87 @@ export default function Restock() {
           </View>
 
           {/* Start Scanning Button */}
-          <TouchableOpacity style={styles.scanButton} onPress={() => router.push({ pathname: '/scanner', params: { type: 'sell' } })}>
+          <TouchableOpacity style={styles.scanButton} onPress={handleOpenScanner}>
             <Scan size={24} color={Colors.light} strokeWidth={1.5} />
-            <Text style={styles.scanButtonText}>Start Scanning</Text>
+            <Text style={styles.scanButtonText}>Start Scanning ({quantity} items)</Text>
           </TouchableOpacity>
 
-          {/* Manual Entry Button */}
-          <TouchableOpacity style={styles.manualEntryButton} onPress={() => { /* Manual entry logic */ }}>
-            <Text style={styles.manualEntryButtonText}>Enter Barcode Manually</Text>
-            <ArrowLeft size={24} color={Colors.accent} strokeWidth={1.5} style={{ transform: [{ rotate: '180deg' }] }}/>
-          </TouchableOpacity>
+          {/* Divider with OR text */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
-          {/* Placeholder for Cart */}
-          <View style={styles.cartPlaceholder}>
-            <View style={styles.cartHeader}>
-              <Text style={styles.cartTitle}>Cart</Text>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                 <Text style={styles.cartItems}>5 items</Text>{/* Static for now */}
-                 <ChevronUp size={24} color={Colors.text} strokeWidth={1.5} />
-              </View>
+          {/* Manual Entry Section */}
+          <View style={styles.manualEntryContainer}>
+            <View style={styles.barcodeInputContainer}>
+              <TextInput
+                style={styles.barcodeInput}
+                value={barcodeInput}
+                onChangeText={setBarcodeInput}
+                placeholder="Enter barcode"
+                placeholderTextColor={Colors.tertiary}
+                keyboardType="numeric"
+                maxLength={13}
+              />
+              <TouchableOpacity 
+                style={styles.addBarcodeButton}
+                onPress={handleAddBarcode}
+              >
+                <ArrowLeft size={24} color={Colors.accent} strokeWidth={1.5} style={{ transform: [{ rotate: '180deg' }] }}/>
+              </TouchableOpacity>
             </View>
-            <View style={styles.cartTotalContainer}>
-               <Text style={styles.cartTotalValue}>345 ETB</Text>{/* Static for now */}
+          </View>
+
+          {/* Barcode Items Container */}
+          <View style={styles.barcodeItemsContainer}>
+            <View style={styles.barcodeItemsHeader}>
+              <Text style={styles.barcodeItemsTitle}>Scanned Items</Text>
+              <Text style={styles.barcodeItemsCount}>{barcodeItems.length} items</Text>
             </View>
+            <ScrollView style={styles.barcodeItemsList}>
+              {barcodeItems.map((item) => (
+                <View key={item.timestamp} style={styles.barcodeItem}>
+                  <View style={styles.barcodeItemContent}>
+                    <Barcode size={20} color={Colors.light} strokeWidth={1.5} />
+                    <Text style={styles.barcodeItemText}>{item.barcode}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => handleRemoveBarcode(item.timestamp)}
+                    style={styles.removeBarcodeButton}
+                  >
+                    <X size={20} color={Colors.light} strokeWidth={1.5} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
           </View>
 
         </View>
       </ScrollView>
+
+      {/* Fixed Confirm Button */}
+      <View style={styles.confirmButtonContainer}>
+        <TouchableOpacity 
+          style={[styles.confirmButton, isSubmitting && styles.confirmButtonDisabled]}
+          onPress={handleConfirmRestock}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={Colors.light} />
+          ) : (
+            <Text style={styles.confirmButtonText}>Confirm Restock</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Restock Scanner Modal */}
+      <RestockScanner 
+        isVisible={isScannerVisible}
+        onClose={handleScannedBarcodes}
+        targetQuantity={quantity}
+      />
     </View>
   );
 }
@@ -307,7 +447,7 @@ const styles = StyleSheet.create({
   scanButton: {
     flexDirection: 'row',
     backgroundColor: Colors.dark,
-    borderRadius: 12,
+    borderRadius: 18,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -319,50 +459,114 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light,
   },
-  manualEntryButton: {
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+    paddingHorizontal: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.primary,
+  },
+  dividerText: {
+    fontFamily: Fonts.publicSans.regular,
+    fontSize: 14,
+    color: Colors.text,
+    marginHorizontal: 16,
+  },
+  manualEntryContainer: {
+    marginTop: 16,
+  },
+  barcodeInputContainer: {
     flexDirection: 'row',
     backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 18,
+    padding: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    paddingHorizontal: 24,
   },
-  manualEntryButtonText: {
+  barcodeInput: {
+    flex: 1,
     fontFamily: Fonts.publicSans.medium,
     fontSize: 16,
-    color: Colors.accent,
+    color: Colors.text,
+    paddingHorizontal: 12,
   },
-  cartPlaceholder: {
+  addBarcodeButton: {
+    padding: 8,
+  },
+  barcodeItemsContainer: {
     marginTop: 32,
     backgroundColor: Colors.primary,
     borderRadius: 16,
     padding: 16,
   },
-  cartHeader: {
+  barcodeItemsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  cartTitle: {
+  barcodeItemsTitle: {
     fontFamily: Fonts.publicSans.semiBold,
     fontSize: 18,
     color: Colors.text,
   },
-  cartItems: {
+  barcodeItemsCount: {
     fontFamily: Fonts.publicSans.regular,
     fontSize: 14,
     color: Colors.text,
-    marginRight: 4,
   },
-  cartTotalContainer: {
-    alignItems: 'flex-end',
-    marginTop: 8,
+  barcodeItemsList: {
+    maxHeight: 200,
   },
-  cartTotalValue: {
-    fontFamily: Fonts.publicSans.bold,
-    fontSize: 20,
-    color: Colors.accent,
+  barcodeItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.tertiary,
+    borderRadius: 18,
+    padding: 12,
+    marginBottom: 8,
+  },
+  barcodeItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  barcodeItemText: {
+    fontFamily: Fonts.publicSans.regular,
+    fontSize: 14,
+    color: Colors.light,
+  },
+  removeBarcodeButton: {
+    padding: 4,
+  },
+  confirmButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.light,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.primary,
+  },
+  confirmButton: {
+    backgroundColor: Colors.accent,
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    fontFamily: Fonts.publicSans.semiBold,
+    fontSize: 16,
+    color: Colors.light,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.7,
   },
 });
