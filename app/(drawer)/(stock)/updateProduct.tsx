@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   ScrollView,
   View,
@@ -9,10 +9,9 @@ import {
   ColorValue,
   Platform,
   Image,
-  Alert,
   ActivityIndicator
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   Boxes,
   ArrowLeft,
@@ -35,7 +34,8 @@ import * as ImagePicker from "expo-image-picker";
 import AlertThresholdSlider from "@/components/ThresholdSlider";
 import { AuthContext } from "@/context/AuthContext";
 import { useShop } from "@/context/ShopContext";
-import { addProduct } from "@/api/stock";
+import { getProductById, updateProduct } from "@/api/stock";
+import SnackBar from "@/components/ui/Snackbar";
 
 const categories = [
   {
@@ -97,7 +97,8 @@ const categories = [
   },
 ];
 
-export default function NewProduct() {
+export default function UpdateProduct() {
+  const { id } = useLocalSearchParams();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Other");
@@ -106,10 +107,40 @@ export default function NewProduct() {
   const [image, setImage] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
   const { token } = useContext(AuthContext);
   const { currentShop } = useShop();
+
+  useEffect(() => {
+    fetchProductDetails();
+  }, [id, token]);
+
+  const fetchProductDetails = async () => {
+    if (!token || !id) return;
+
+    try {
+      const response = await getProductById(token, id as string);
+      if (response?.data?.product) {
+        const product = response.data.product;
+        setName(product.name);
+        setPrice(product.price.toString());
+        setSelectedCategory(product.category);
+        setIsSerialized(product.is_serialized);
+        setDescription(product.description || "");
+        setImage(product.image_url);
+        setThreshold(product.threshold);
+      }
+    } catch (error: any) {
+      setNotification({
+        message: error.response?.data?.error || "Failed to fetch product details",
+        type: "error"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const permissionResult =
@@ -131,85 +162,121 @@ export default function NewProduct() {
   };
 
   const handleSubmit = async () => {
-    if (!token || !currentShop?.id) {
-      setSubmissionError("Authentication or shop information missing.");
+    if (!token || !currentShop?.id || !id) {
+      setNotification({
+        message: "Authentication or shop information missing",
+        type: "error"
+      });
       return;
     }
 
-    if (!name || !price || !selectedCategory || !image) {
-      setSubmissionError("Please fill in all required fields (Name, Price, Category, Image).");
+    if (!name || !price || !selectedCategory) {
+      setNotification({
+        message: "Please fill in all required fields (Name, Price, Category)",
+        type: "error"
+      });
       return;
     }
 
     setIsSubmitting(true);
-    setSubmissionError(null);
-
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("price", parseFloat(price).toFixed(2));
-    formData.append("category", selectedCategory);
-    formData.append("isSerialized", isSerialized ? "true" : "false");
-    formData.append("description", description);
-    formData.append("shop_id", currentShop.id);
-    formData.append("threshold", threshold.toString());
-
-    if (image) {
-      const uriParts = image.split(".");
-      const fileType = uriParts[uriParts.length - 1];
-      const imageName = `product_${Date.now()}.${fileType}`;
-      const file = {
-        uri: image,
-        name: imageName,
-        type: `image/${fileType}`,
-      } as any;
-      formData.append("image", file);
-    }
 
     try {
-      const response = await addProduct(token, formData);
-      if (response && response.data && response.data.product_id) {
-        const newProductId = response.data.product_id;
-        router.replace({ pathname: '/(drawer)/(stock)/newProductSuccess', params: { productId: newProductId } });
+      const productData = {
+        name,
+        price: parseFloat(price).toFixed(2),
+        category: selectedCategory,
+        description,
+        shop_id: currentShop.id,
+        threshold: threshold.toString()
+      };
+
+      // If there's a new image, use FormData
+      if (image && image.startsWith('file://')) {
+        const formData = new FormData();
+        Object.entries(productData).forEach(([key, value]) => {
+          formData.append(key, value);
+        });
+
+        const uriParts = image.split(".");
+        const fileType = uriParts[uriParts.length - 1];
+        const imageName = `product_${Date.now()}.${fileType}`;
+        const file = {
+          uri: image,
+          name: imageName,
+          type: `image/${fileType}`,
+        } as any;
+        formData.append("image", file);
+
+        console.log('Sending update request with FormData:', {
+          ...productData,
+          hasNewImage: true
+        });
+
+        const response = await updateProduct(token, id as string, formData);
+        console.log('Update response:', response);
       } else {
-        console.log("Unexpected response structure:", response);
-        setSubmissionError(response?.data?.error || "Failed to add product: Unexpected response from server.");
+        // If no new image, send as JSON
+        console.log('Sending update request with JSON:', productData);
+        const response = await updateProduct(token, id as string, productData);
+        console.log('Update response:', response);
       }
-    } catch (err: any) {
-      console.error("Error adding product:", err);
-      let errorMessage = "An unexpected error occurred while adding the product.";
-      if (err.response) {
-        if (err.response.data && err.response.data.error) {
-          errorMessage = `Error: ${err.response.data.error}`;
-        } else if (err.response.status) {
-           errorMessage = `Request failed with status code ${err.response.status}.`;
-        } else {
-           errorMessage = "An error occurred with the response.";
-        }
-      } else if (err.request) {
-        errorMessage = "No response received from the server. Please check your network connection.";
+
+      setNotification({
+        message: "Product updated successfully",
+        type: "success"
+      });
+      setTimeout(() => {
+        router.replace({
+          pathname: "/(drawer)/(stock)/productDetails",
+          params: { id }
+        });
+      }, 1500);
+    } catch (error: any) {
+      console.error("Error updating product:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
+
+      let errorMessage = "Failed to update product";
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-      setSubmissionError(errorMessage);
+
+      setNotification({
+        message: errorMessage,
+        type: "error"
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace('/(drawer)/(tabs)')}>
+        <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={32} color={Colors.accent} strokeWidth={1.5} />
         </TouchableOpacity>
         <Text style={{ fontFamily: Fonts.outfit.medium, fontSize: 20 }}>
-          New Product
+          Update Product
         </Text>
         <ArrowLeft size={32} color={"transparent"} strokeWidth={1.5} />
       </View>
       <View style={styles.headingContainer}>
-        <Text style={styles.heading}>Add Product Details</Text>
-        <Text style={{ fontSize: 16, fontFamily: Fonts.plusJakarta.medium }}>
-          Step 1/2
-        </Text>
+        <Text style={styles.heading}>Update Product Details</Text>
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -305,109 +372,6 @@ export default function NewProduct() {
             ))}
           </ScrollView>
         </View>
-        <View style={{ gap: 10 }}>
-          <Text style={styles.label}>Seriallization</Text>
-          <View style={styles.serialContainer}>
-            <TouchableOpacity
-              style={[
-                styles.serialRadio,
-                !isSerialized ? {} : { borderColor: Colors.accent },
-              ]}
-              onPress={() => {
-                setIsSerialized(true);
-              }}
-            >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              >
-                <Barcode
-                  size={18}
-                  color={!isSerialized ? Colors.text : Colors.accent}
-                />
-                <Text
-                  style={{
-                    fontFamily: Fonts.plusJakarta.medium,
-                    fontSize: 14,
-                    color: !isSerialized ? Colors.text : Colors.accent,
-                  }}
-                >
-                  Barcode
-                </Text>
-              </View>
-              <View
-                style={{
-                  height: 16,
-                  width: 16,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: isSerialized ? Colors.accent : Colors.text,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <View
-                  style={{
-                    height: 10,
-                    width: 10,
-                    borderRadius: 20,
-                    backgroundColor: isSerialized
-                      ? Colors.accent
-                      : "transparent",
-                  }}
-                ></View>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.serialRadio,
-                isSerialized ? {} : { borderColor: Colors.accent },
-              ]}
-              onPress={() => {
-                setIsSerialized(false);
-              }}
-            >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              >
-                <CircleOff
-                  size={16}
-                  color={isSerialized ? Colors.text : Colors.accent}
-                />
-                <Text
-                  style={{
-                    fontFamily: Fonts.plusJakarta.medium,
-                    fontSize: 14,
-                    color: isSerialized ? Colors.text : Colors.accent,
-                  }}
-                >
-                  Not Serialized
-                </Text>
-              </View>
-              <View
-                style={{
-                  height: 16,
-                  width: 16,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: !isSerialized ? Colors.accent : Colors.text,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <View
-                  style={{
-                    height: 10,
-                    width: 10,
-                    borderRadius: 20,
-                    backgroundColor: !isSerialized
-                      ? Colors.accent
-                      : "transparent",
-                  }}
-                ></View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
         <View>
           <Text style={styles.label}>Alert me on</Text>
           <AlertThresholdSlider value={threshold} setValue={setThreshold} />
@@ -428,14 +392,12 @@ export default function NewProduct() {
             style={styles.imageUploadButton}
             onPress={pickImage}
           >
-            <Text style={styles.imageUploadButtonText}>Upload Image</Text>
+            <Text style={styles.imageUploadButtonText}>Update Image</Text>
             <ImagePlus size={24} color={Colors.text} />
           </TouchableOpacity>
           <View>
             {image && (
-              <View
-                style={styles.uploadedImageContainer}
-              >
+              <View style={styles.uploadedImageContainer}>
                 <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={() => setImage("")}
@@ -454,27 +416,32 @@ export default function NewProduct() {
       <TouchableOpacity
         style={[
           styles.continueButton,
-          !image || !name || !price || isSubmitting ? styles.disabledButton : {},
+          !name || !price || isSubmitting ? styles.disabledButton : {},
         ]}
-        disabled={!image || !name || !price || isSubmitting}
+        disabled={!name || !price || isSubmitting}
         onPress={handleSubmit}
       >
         {isSubmitting ? (
           <ActivityIndicator color={Colors.light} />
         ) : (
-        <Text
-          style={{
-            fontFamily: Fonts.plusJakarta.medium,
-            fontSize: 17,
-            color: Colors.light,
-          }}
-        >
-          Create Product
-        </Text>
+          <Text
+            style={{
+              fontFamily: Fonts.plusJakarta.medium,
+              fontSize: 17,
+              color: Colors.light,
+            }}
+          >
+            Update Product
+          </Text>
         )}
       </TouchableOpacity>
-      {submissionError && (
-        <Text style={styles.errorText}>{submissionError}</Text>
+
+      {notification && (
+        <SnackBar
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
       )}
     </View>
   );
@@ -486,6 +453,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light,
     padding: 20,
     gap: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.light,
   },
   header: {
     display: "flex",
@@ -540,21 +513,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 8,
   },
-  serialContainer: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 8,
-  },
-  serialRadio: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   imageUploadButton: {
     borderRadius: 18,
     paddingHorizontal: 32,
@@ -605,11 +563,4 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.secondary,
     opacity: 0.8,
   },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    marginTop: 10,
-    fontFamily: Fonts.plusJakarta.regular,
-    fontSize: 14,
-  },
-});
+}); 

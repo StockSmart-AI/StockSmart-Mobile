@@ -6,7 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import { AuthContext } from "./AuthContext"; // Assuming AuthContext provides user info
-import { getShopsByOwner, createShop as apiCreateShop } from "../api/shop"; // Renamed to avoid conflict
+import { getShopsByUser, createShop as apiCreateShop, updateShop as apiUpdateShop, deleteShop as apiDeleteShop } from "../api/shop"; // Renamed to avoid conflict
 
 export interface Shop {
   id: string;
@@ -19,6 +19,8 @@ interface ShopContextType {
   currentShop: Shop | null;
   switchShop: (shopId: string) => void;
   addShop: (name: string, address: string) => Promise<Shop | null>; // Updated to include address and return promise
+  updateShop: (name: string, address: string) => Promise<void>;
+  deleteShop: () => Promise<void>;
   isLoading: boolean;
   fetchShops: () => Promise<void>; // Added function to manually refresh shops
 }
@@ -42,7 +44,7 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({
     if (user && token) {
       setIsLoading(true);
       try {
-        const response = await getShopsByOwner(token);
+        const response = await getShopsByUser(token);
         if (response.data && Array.isArray(response.data)) {
           const fetchedShops: Shop[] = response.data;
           setShops(fetchedShops);
@@ -122,9 +124,59 @@ export const ShopProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const updateShop = async (name: string, address: string): Promise<void> => {
+    if (!user || !token || !currentShop) {
+      throw new Error("User not authenticated or no shop selected");
+    }
+    setIsLoading(true);
+    try {
+      await apiUpdateShop(currentShop.id, name, address, token);
+      const updatedShop: Shop = { ...currentShop, name, address };
+      setShops((prevShops) =>
+        prevShops.map((shop) =>
+          shop.id === currentShop.id ? updatedShop : shop
+        )
+      );
+      setCurrentShop(updatedShop);
+    } catch (error) {
+      console.error("Failed to update shop:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteShop = async (): Promise<void> => {
+    if (!user || !token || !currentShop) {
+      throw new Error("User not authenticated or no shop selected");
+    }
+    setIsLoading(true);
+    try {
+      await apiDeleteShop(currentShop.id, token);
+      setShops((prevShops) =>
+        prevShops.filter((shop) => shop.id !== currentShop.id)
+      );
+      setCurrentShop(null);
+    } catch (error) {
+      console.error("Failed to delete shop:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <ShopContext.Provider
-      value={{ shops, currentShop, switchShop, addShop, isLoading, fetchShops }}
+      value={{
+        shops,
+        currentShop,
+        switchShop,
+        addShop,
+        updateShop,
+        deleteShop,
+        isLoading,
+        fetchShops,
+      }}
     >
       {children}
     </ShopContext.Provider>

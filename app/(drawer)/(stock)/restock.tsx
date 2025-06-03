@@ -7,6 +7,7 @@ import { AuthContext } from "@/context/AuthContext";
 import { ArrowLeft, Minus, Plus, Scan, ChevronUp, X, Barcode } from "lucide-react-native";
 import { RestockScanner } from "@/components/RestockScanner";
 import { useShop } from "@/context/ShopContext";
+import Snackbar from "@/components/ui/Snackbar";
 
 interface Product {
   id: string;
@@ -18,6 +19,7 @@ interface Product {
   description: string;
   category: string;
   image_url: string;
+  isSerialized: boolean;
 }
 
 interface BarcodeItem {
@@ -38,6 +40,7 @@ export default function Restock() {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {currentShop} = useShop()
+  const [showSnackbar, setShowSnackbar] = useState(false);
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -93,11 +96,6 @@ export default function Restock() {
     }
   };
 
-  const handleSell = () => {
-    // Implement sell logic here later
-    console.log(`Selling ${quantity} of ${product?.name}`);
-    // You would typically add the item to a cart or process the sale here.
-  };
 
   const handleAddBarcode = () => {
     if (barcodeInput.trim()) {
@@ -146,22 +144,17 @@ export default function Restock() {
         product_id: product.id,
         cost_price: product.price * quantity,
         quantity: quantity,
-        barcodes: barcodeItems.map(item => item.barcode)
+        barcodes: product.isSerialized ? barcodeItems.map(item => item.barcode) : []
       };
 
       const response = await restockProducts(token, restockData);
       
-      if (response.data.success) {
-        Alert.alert(
-          "Success",
-          "Products have been restocked successfully",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace({ pathname: '/(drawer)/(tabs)/Inventory', params: { source: 'restock' } })
-            }
-          ]
-        );
+      console.log(response.status)
+      if (response.status == 201) {
+        setShowSnackbar(true);
+        setTimeout(() => {
+          router.replace('/(drawer)/(tabs)');
+        }, 1000);
       }
     } catch (error: any) {
       Alert.alert(
@@ -242,68 +235,73 @@ export default function Restock() {
           </View>
 
           {/* Total Value Calculation */}
-           <View style={styles.totalRow}>
+          <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Value</Text>
             <Text style={styles.totalValue}>${(product.price * quantity).toFixed(2)}</Text>
           </View>
 
-          {/* Start Scanning Button */}
-          <TouchableOpacity style={styles.scanButton} onPress={handleOpenScanner}>
-            <Scan size={24} color={Colors.light} strokeWidth={1.5} />
-            <Text style={styles.scanButtonText}>Start Scanning ({quantity} items)</Text>
-          </TouchableOpacity>
-
-          {/* Divider with OR text */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Manual Entry Section */}
-          <View style={styles.manualEntryContainer}>
-            <View style={styles.barcodeInputContainer}>
-              <TextInput
-                style={styles.barcodeInput}
-                value={barcodeInput}
-                onChangeText={setBarcodeInput}
-                placeholder="Enter barcode"
-                placeholderTextColor={Colors.tertiary}
-                keyboardType="numeric"
-                maxLength={13}
-              />
-              <TouchableOpacity 
-                style={styles.addBarcodeButton}
-                onPress={handleAddBarcode}
-              >
-                <ArrowLeft size={24} color={Colors.accent} strokeWidth={1.5} style={{ transform: [{ rotate: '180deg' }] }}/>
+          {/* Only show scanning and barcode features for serialized products */}
+          {product.isSerialized && (
+            <>
+              {/* Start Scanning Button */}
+              <TouchableOpacity style={styles.scanButton} onPress={handleOpenScanner}>
+                <Scan size={24} color={Colors.light} strokeWidth={1.5} />
+                <Text style={styles.scanButtonText}>Start Scanning ({quantity} items)</Text>
               </TouchableOpacity>
-            </View>
-          </View>
 
-          {/* Barcode Items Container */}
-          <View style={styles.barcodeItemsContainer}>
-            <View style={styles.barcodeItemsHeader}>
-              <Text style={styles.barcodeItemsTitle}>Scanned Items</Text>
-              <Text style={styles.barcodeItemsCount}>{barcodeItems.length} items</Text>
-            </View>
-            <ScrollView style={styles.barcodeItemsList}>
-              {barcodeItems.map((item) => (
-                <View key={item.timestamp} style={styles.barcodeItem}>
-                  <View style={styles.barcodeItemContent}>
-                    <Barcode size={20} color={Colors.light} strokeWidth={1.5} />
-                    <Text style={styles.barcodeItemText}>{item.barcode}</Text>
-                  </View>
+              {/* Divider with OR text */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Manual Entry Section */}
+              <View style={styles.manualEntryContainer}>
+                <View style={styles.barcodeInputContainer}>
+                  <TextInput
+                    style={styles.barcodeInput}
+                    value={barcodeInput}
+                    onChangeText={setBarcodeInput}
+                    placeholder="Enter barcode"
+                    placeholderTextColor={Colors.tertiary}
+                    keyboardType="numeric"
+                    maxLength={13}
+                  />
                   <TouchableOpacity 
-                    onPress={() => handleRemoveBarcode(item.timestamp)}
-                    style={styles.removeBarcodeButton}
+                    style={styles.addBarcodeButton}
+                    onPress={handleAddBarcode}
                   >
-                    <X size={20} color={Colors.light} strokeWidth={1.5} />
+                    <ArrowLeft size={24} color={Colors.accent} strokeWidth={1.5} style={{ transform: [{ rotate: '180deg' }] }}/>
                   </TouchableOpacity>
                 </View>
-              ))}
-            </ScrollView>
-          </View>
+              </View>
+
+              {/* Barcode Items Container */}
+              <View style={styles.barcodeItemsContainer}>
+                <View style={styles.barcodeItemsHeader}>
+                  <Text style={styles.barcodeItemsTitle}>Scanned Items</Text>
+                  <Text style={styles.barcodeItemsCount}>{barcodeItems.length} items</Text>
+                </View>
+                <ScrollView style={styles.barcodeItemsList}>
+                  {barcodeItems.map((item) => (
+                    <View key={item.timestamp} style={styles.barcodeItem}>
+                      <View style={styles.barcodeItemContent}>
+                        <Barcode size={20} color={Colors.light} strokeWidth={1.5} />
+                        <Text style={styles.barcodeItemText}>{item.barcode}</Text>
+                      </View>
+                      <TouchableOpacity 
+                        onPress={() => handleRemoveBarcode(item.timestamp)}
+                        style={styles.removeBarcodeButton}
+                      >
+                        <X size={20} color={Colors.light} strokeWidth={1.5} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </>
+          )}
 
         </View>
       </ScrollView>
@@ -324,11 +322,21 @@ export default function Restock() {
       </View>
 
       {/* Restock Scanner Modal */}
-      <RestockScanner 
-        isVisible={isScannerVisible}
-        onClose={handleScannedBarcodes}
-        targetQuantity={quantity}
-      />
+      {product.isSerialized && (
+        <RestockScanner 
+          isVisible={isScannerVisible}
+          onClose={handleScannedBarcodes}
+          targetQuantity={quantity}
+        />
+      )}
+
+      {showSnackbar && (
+        <Snackbar
+          type="success"
+          message="Products have been restocked successfully"
+          onClose={() => setShowSnackbar(false)}
+        />
+      )}
     </View>
   );
 }

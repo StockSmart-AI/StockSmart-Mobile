@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from "react";
-import { StyleSheet, TouchableOpacity, Text, View, Image } from "react-native";
+import { StyleSheet, TouchableOpacity, Text, View, Image, ActivityIndicator } from "react-native";
 import BottomSheet, {
   BottomSheetView,
   BottomSheetScrollView,
@@ -18,44 +18,42 @@ import {
 } from "lucide-react-native";
 import { ScrollView } from "react-native-gesture-handler";
 
-const initialCartData = [
-  {
-    id: "1",
-    name: "Pepsi Soda",
-    category: "Beverage",
-    quantity: 2,
-    pricePerUnit: 25,
-    isSerialized: true,
-    barcodes: ["34534534534454", "675345346346345"],
-    img: require("@/assets/images/image.png"), // Assuming image.png is generic or update path
-  },
-  {
-    id: "2",
-    name: "Milk Pack",
-    category: "Dairy",
-    quantity: 1,
-    pricePerUnit: 60,
-    isSerialized: false,
-    barcodes: [],
-    img: require("@/assets/images/image.png"), // Replace with actual image path if different
-  },
-  {
-    id: "3",
-    name: "Detergent Powder",
-    category: "Cleaning",
-    quantity: 3,
-    pricePerUnit: 15,
-    isSerialized: true,
-    barcodes: ["12312312312312", "45645645645645", "78978978978978"],
-    img: require("@/assets/images/image.png"), // Replace with actual image path if different
-  },
-];
+interface CartItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  pricePerUnit: number;
+  isSerialized: boolean;
+  barcodes: string[];
+  img: any; // Using any for image source type
+  stockQuantity: number;
+}
 
-const Cart = () => {
+interface CartProps {
+  items: CartItem[];
+  onIncreaseQuantity: (itemId: string) => void;
+  onDecreaseQuantity: (itemId: string) => void;
+  onRemoveItem: (itemId: string) => void;
+  onRemoveBarcode: (itemId: string, barcode: string) => void;
+  onClearCart: () => void;
+  onConfirm: () => void;
+  isSubmitting?: boolean;
+}
+
+const Cart: React.FC<CartProps> = ({
+  items,
+  onIncreaseQuantity,
+  onDecreaseQuantity,
+  onRemoveItem,
+  onRemoveBarcode,
+  onClearCart,
+  onConfirm,
+  isSubmitting = false,
+}) => {
   const snapPoints = useMemo(() => ["10%", "90%"], []);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [bottomSheetState, setBottomSheetState] = useState(0);
-  const [cartItems, setCartItems] = useState(initialCartData);
 
   const toggleBottomSheet = () => {
     if (bottomSheetState === 1) {
@@ -66,57 +64,8 @@ const Cart = () => {
     bottomSheetRef.current?.snapToIndex(bottomSheetState);
   };
 
-  const handleIncreaseQuantity = (itemId: string) => {
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId && !item.isSerialized
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      )
-    );
-  };
-
-  const handleDecreaseQuantity = (itemId: string) => {
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId && !item.isSerialized && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      )
-    );
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
-  };
-
-  const handleRemoveBarcode = (itemId: string, barcodeToRemove: string) => {
-    setCartItems(
-      (prevItems) =>
-        prevItems
-          .map((item) => {
-            if (item.id === itemId && item.isSerialized) {
-              const updatedBarcodes = item.barcodes.filter(
-                (bc) => bc !== barcodeToRemove
-              );
-              return {
-                ...item,
-                barcodes: updatedBarcodes,
-                quantity: updatedBarcodes.length,
-              };
-            }
-            return item;
-          })
-          .filter((item) => !(item.isSerialized && item.quantity === 0)) // Remove item if serialized and quantity is 0
-    );
-  };
-
-  const handleClearCart = () => {
-    setCartItems([]);
-  };
-
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cartItems.reduce(
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce(
     (sum, item) => sum + item.quantity * item.pricePerUnit,
     0
   );
@@ -161,14 +110,14 @@ const Cart = () => {
           style={{ maxHeight: "60%" }}
           contentContainerStyle={styles.scrollViewContentContainer}
         >
-          {cartItems.length === 0 ? (
+          {items.length === 0 ? (
             <View style={styles.emptyCartContainer}>
               <Text style={styles.emptyCartText}>
                 Your cart is empty. Add some items!
               </Text>
             </View>
           ) : (
-            cartItems.map((item) => (
+            items.map((item) => (
               <View key={item.id} style={styles.cartItemOuterContainer}>
                 <View style={styles.cartItemRow}>
                   <View style={styles.cartItemImageAndDetails}>
@@ -176,7 +125,7 @@ const Cart = () => {
                       <Image source={item.img} style={styles.cartItemImage} />
                       <TouchableOpacity
                         style={styles.removeItemButton}
-                        onPress={() => handleRemoveItem(item.id)}
+                        onPress={() => onRemoveItem(item.id)}
                       >
                         <X color={Colors.light} size={20} strokeWidth={1.5} />
                       </TouchableOpacity>
@@ -188,13 +137,13 @@ const Cart = () => {
                       <Text style={styles.cartItemName}>{item.name}</Text>
                       <View style={styles.quantityControlContainer}>
                         <TouchableOpacity
-                          onPress={() => handleIncreaseQuantity(item.id)}
-                          disabled={item.isSerialized}
+                          onPress={() => onIncreaseQuantity(item.id)}
+                          disabled={item.isSerialized || item.quantity >= item.stockQuantity}
                         >
                           <CirclePlus
                             size={24}
                             color={
-                              item.isSerialized
+                              item.isSerialized || item.quantity >= item.stockQuantity
                                 ? Colors.tertiary
                                 : Colors.accent
                             }
@@ -203,7 +152,7 @@ const Cart = () => {
                         </TouchableOpacity>
                         <Text style={styles.quantityText}>{item.quantity}</Text>
                         <TouchableOpacity
-                          onPress={() => handleDecreaseQuantity(item.id)}
+                          onPress={() => onDecreaseQuantity(item.id)}
                           disabled={item.isSerialized || item.quantity === 1}
                         >
                           <CircleMinus
@@ -232,7 +181,9 @@ const Cart = () => {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.barcodeScrollContent}
                       >
-                        {item.barcodes.map((barcode, index) => (
+                        {item.barcodes.map((barcode, index) => {
+                          console.log(item.barcodes)
+                          return (
                           <View key={index} style={styles.barcodeTag}>
                             <Barcode
                               size={20}
@@ -242,7 +193,7 @@ const Cart = () => {
                             <Text style={styles.barcodeText}>{barcode}</Text>
                             <TouchableOpacity
                               onPress={() =>
-                                handleRemoveBarcode(item.id, barcode)
+                                onRemoveBarcode(item.id, barcode)
                               }
                             >
                               <X
@@ -252,7 +203,7 @@ const Cart = () => {
                               />
                             </TouchableOpacity>
                           </View>
-                        ))}
+                      )})}
                       </ScrollView>
                     </View>
                   )}
@@ -268,17 +219,25 @@ const Cart = () => {
             <TouchableOpacity
               style={[
                 styles.confirmButton,
-                cartItems.length === 0 && styles.disabledConfirmButton,
+                (items.length === 0 || isSubmitting) && styles.disabledConfirmButton,
               ]}
-              disabled={cartItems.length === 0}
+              disabled={items.length === 0 || isSubmitting}
+              onPress={onConfirm}
             >
-              <ShoppingBag color={Colors.light} size={20} strokeWidth={1.5} />
-              <Text style={styles.confirmButtonText}>Confirm</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color={Colors.light} />
+              ) : (
+                <>
+                  <ShoppingBag color={Colors.light} size={20} strokeWidth={1.5} />
+                  <Text style={styles.confirmButtonText}>Confirm</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.clearCartButton}
-            onPress={handleClearCart}
+            onPress={onClearCart}
+            disabled={items.length === 0 || isSubmitting}
           >
             <Eraser color={Colors.light} strokeWidth={1.5} size={20} />
             <Text style={styles.clearCartButtonText}>Clear Cart</Text>
@@ -353,6 +312,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cartItemImageAndDetails: {
+    flex: 1,
     flexDirection: "row",
     gap: 10,
   },
@@ -360,9 +320,11 @@ const styles = StyleSheet.create({
     position: "relative",
     width: 96,
     height: 96,
+    borderRadius: 14,
+    overflow: "hidden"
   },
   cartItemImage: {
-    resizeMode: "contain",
+    resizeMode: "cover",
     height: "100%",
     width: "100%",
   },
@@ -378,6 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cartItemDetails: {
+    width: '50%',
     justifyContent: "center",
     gap: 4,
   },
@@ -389,6 +352,7 @@ const styles = StyleSheet.create({
   cartItemName: {
     fontFamily: Fonts.publicSans.semiBold,
     fontSize: 18,
+    width: '80%',
   },
   quantityControlContainer: {
     flexDirection: "row",

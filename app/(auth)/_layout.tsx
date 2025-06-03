@@ -37,6 +37,21 @@ export default function AuthLayout() {
           headerTintColor: Colors.accent,
         }}
       />
+      <Stack.Screen
+        name="employeeDetails"
+        options={{
+          title: "Select your shop",
+          headerTitleStyle: {
+            fontFamily: Fonts.plusJakarta.medium,
+            fontSize: 17,
+            color: Colors.text,
+          },
+          headerStyle: { backgroundColor: Colors.light },
+          headerShadowVisible: false,
+          headerBackImageSource: require("@/assets/icons/Left.png"),
+          headerTintColor: Colors.accent,
+        }}
+      />
     </Stack>
   );
 }

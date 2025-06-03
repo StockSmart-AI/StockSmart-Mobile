@@ -79,3 +79,16 @@ export const verify = async (otp, email) => {
     throw error;
   }
 }
+
+// Forgot Password Request
+export const forgotPassword = async (email) => {
+  try {
+    const response = await axios.post(`${apiURL}/forgot-password`, {
+      email,
+    });
+    return response;
+  } catch (error) {
+    console.error("Forgot password error:", error.response?.data || error.message);
+    throw error;
+  }
+};

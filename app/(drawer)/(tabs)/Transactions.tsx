@@ -1,27 +1,20 @@
 //@ts-nocheck
 import { Colors, Fonts } from "@/constants/Theme";
-import { CalendarDays, PackagePlus, ShoppingBag } from "lucide-react-native";
-import React, { useState } from "react";
+import { PackagePlus, ShoppingBag } from "lucide-react-native";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   ScrollView,
-  Platform,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   Boxes,
-  ArrowLeft,
   Milk,
   Icon,
-  CircleOff,
-  Barcode,
-  ImagePlus,
-  X,
 } from "lucide-react-native";
 import {
   bottleChampagne,
@@ -31,6 +24,10 @@ import {
   bottlePerfume,
 } from "@lucide/lab";
 import { router } from "expo-router";
+import { getTransactions } from "@/api/transactions";
+import { AuthContext } from "@/context/AuthContext";
+import { ShopContext } from "@/context/ShopContext";
+import * as SecureStore from "expo-secure-store";
 
 const categories = [
   {
@@ -105,7 +102,7 @@ const groupByDate = (transactions) => {
   };
 
   transactions.forEach((tx) => {
-    const date = parseISO(tx.date); // Convert to Date object
+    const date = parseISO(tx.date);
 
     if (isToday(date)) {
       grouped.today.push(tx);
@@ -123,93 +120,65 @@ const groupByDate = (transactions) => {
   return grouped;
 };
 
-const transactions = [
-  {
-    id: 2,
-    type: "sale",
-    itemsCount: 5,
-    user: "Fasil",
-    userInitial: "F",
-    categories: ["Beverage", "Dairy", "Processed"],
-    price: 212,
-    date: new Date().toISOString(), // Today
-    title: "Sale Transaction",
-  },
-  {
-    id: 8,
-    type: "sale",
-    itemsCount: 7,
-    user: "Fasil",
-    userInitial: "F",
-    categories: ["Beverage", "Dairy", "Processed", "Cosmetics"],
-    price: 432,
-    date: new Date().toISOString(), // Today
-    title: "Sale Transaction",
-  },
-  {
-    id: 3,
-    type: "restock",
-    itemsCount: 10,
-    user: "John Doe",
-    userInitial: "JD",
-    categories: ["Cleaning", "Cosmetics"],
-    price: 150, // Or perhaps cost for restock
-    date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-    title: "Restock Event",
-  },
-  {
-    id: 4,
-    type: "sale",
-    itemsCount: 3,
-    user: "Jane Smith",
-    userInitial: "JS",
-    categories: ["Baby"],
-    price: 75,
-    date: "2024-03-10T14:30:00Z", // Earlier
-    title: "Baby Products Sale",
-  },
-  {
-    id: 5,
-    type: "restock",
-    itemsCount: 20,
-    user: "Admin",
-    userInitial: "A",
-    categories: ["Other", "Dairy"],
-    price: 300,
-    date: "2024-03-10T09:00:00Z", // Earlier on the same day
-    title: "Morning Restock",
-  },
-];
-
 const Transactions = () => {
-  const grouped = groupByDate(transactions);
-  const [date, setDate] = useState(new Date());
-  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const { currentShop } = useContext(ShopContext);
 
-  const onChange = (event, selectedDate) => {
-    setShow(Platform.OS === "ios");
-    if (selectedDate) {
-      setDate(selectedDate);
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = await SecureStore.getItemAsync("accessToken");
+      
+      const response = await getTransactions(token, {
+        shopId: currentShop?.id,
+        page: 1,
+        perPage: 10
+      });
+      const { transactions: fetchedTransactions } = response.data;
+      setTransactions(fetchedTransactions);
+    } catch (err) {
+      setError(err.message || "Failed to fetch transactions");
+      console.error("Error fetching transactions:", err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (currentShop?.id) {
+      fetchTransactions();
+    }
+  }, [currentShop?.id]);
+
+  const grouped = groupByDate(transactions);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchTransactions}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Transactions</Text>
-        <TouchableOpacity onPress={() => setShow(true)}>
-          <CalendarDays color={Colors.text} size={28} strokeWidth={1.5} />
-        </TouchableOpacity>
       </View>
-      {show && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={onChange}
-          accentColor={Colors.accent}
-        />
-      )}
       <ScrollView
         contentContainerStyle={{ paddingBottom: 20 }}
         style={styles.scrollView}
@@ -218,72 +187,7 @@ const Transactions = () => {
           <>
             <Text style={styles.dateGroupHeader}>Today</Text>
             {grouped.today.map((tx) => (
-              <TouchableOpacity key={tx.id} style={styles.transactionItemContainer} onPress={() => router.push({ pathname: "/(drawer)/transactionsDetail", params: { id: tx.id } })}>
-                <View style={styles.transactionItemRow}>
-                  <View style={styles.transactionInfoContainer}>
-                    {tx.type === "restock" ? (
-                      <PackagePlus
-                        color={Colors.text}
-                        strokeWidth={1.5}
-                        size={36}
-                      />
-                    ) : (
-                      <ShoppingBag
-                        color={Colors.text}
-                        strokeWidth={1.5}
-                        size={36}
-                      />
-                    )}
-                    <View>
-                      <Text style={styles.transactionTitle}>
-                        {tx.itemsCount} Items{" "}
-                        {tx.type === "sale" ? "Sold" : "Restocked"}
-                      </Text>
-                      <Text style={styles.transactionTimestamp}>
-                        {format(parseISO(tx.date), "p")}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.userInfoContainer}>
-                    <View style={styles.userAvatar}>
-                      <Text style={styles.userAvatarText}>
-                        {tx.userInitial}
-                      </Text>
-                    </View>
-                    <Text style={styles.userNameText}>
-                      By {tx.user.split(" ")[0]}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.transactionDetailsRow}>
-                  <View style={styles.categoryIconsContainer}>
-                    {Array.isArray(tx.categories) &&
-                      tx.categories.slice(0, 3).map((categoryName) => {
-                        const category = categoryMap[categoryName];
-                        return category ? (
-                          <View
-                            key={categoryName}
-                            style={styles.categoryIconView}
-                          >
-                            {category.icon(Colors.text)}
-                          </View>
-                        ) : null;
-                      })}
-
-                    {Array.isArray(tx.categories) &&
-                      tx.categories.length > 3 && (
-                        <View style={styles.categoryIconView}>
-                          <Text style={styles.moreCategoriesText}>
-                            +{tx.categories.length - 3}
-                          </Text>
-                        </View>
-                      )}
-                  </View>
-                  <Text style={styles.transactionAmountText}>
-                    {tx.price}ETB
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <TransactionItem key={tx.id} transaction={tx} />
             ))}
           </>
         )}
@@ -291,143 +195,87 @@ const Transactions = () => {
           <>
             <Text style={styles.dateGroupHeaderBold}>Yesterday</Text>
             {grouped.yesterday.map((tx) => (
-              <TouchableOpacity key={tx.id} style={styles.transactionItemContainer} onPress={() => router.push({ pathname: "/(drawer)/transactionsDetail", params: { id: tx.id } })}>
-                <View style={styles.transactionItemRow}>
-                  <View style={styles.transactionInfoContainer}>
-                    {tx.type === "restock" ? (
-                      <PackagePlus
-                        color={Colors.text}
-                        strokeWidth={1.5}
-                        size={36}
-                      />
-                    ) : (
-                      <ShoppingBag
-                        color={Colors.text}
-                        strokeWidth={1.5}
-                        size={36}
-                      />
-                    )}
-                    <View>
-                      <Text style={styles.transactionTitle}>
-                        {tx.itemsCount} Items{" "}
-                        {tx.type === "sale" ? "Sold" : "Restocked"}
-                      </Text>
-                      <Text style={styles.transactionTimestamp}>
-                        {format(parseISO(tx.date), "p")}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.userInfoContainer}>
-                    <View style={styles.userAvatar}>
-                      <Text style={styles.userAvatarText}>
-                        {tx.userInitial}
-                      </Text>
-                    </View>
-                    <Text style={styles.userNameText}>
-                      By {tx.user.split(" ")[0]}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.transactionDetailsRow}>
-                  <View style={styles.categoryIconsContainer}>
-                    {tx.categories.slice(0, 3).map((categoryName, index) => {
-                      const category = categoryMap[categoryName];
-                      return (
-                        category && (
-                          <View key={index} style={styles.categoryIconView}>
-                            {category.icon(Colors.text)}
-                          </View>
-                        )
-                      );
-                    })}
-                    {tx.categories.length > 3 && (
-                      <View style={styles.categoryIconView}>
-                        <Text style={styles.moreCategoriesText}>
-                          +{tx.categories.length - 3}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.transactionAmountText}>
-                    {tx.price}ETB
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <TransactionItem key={tx.id} transaction={tx} />
             ))}
           </>
         )}
         {Object.keys(grouped.earlier).map((date) => (
           <View key={date}>
             <Text style={styles.dateGroupHeaderBold}>{date}</Text>
-            
             {grouped.earlier[date].map((tx) => (
-              <TouchableOpacity key={tx.id} style={styles.transactionItemContainer} onPress={() => router.push({ pathname: "/(drawer)/transactionsDetail", params: { id: tx.id } })}>
-                <View style={styles.transactionItemRow}>
-                  <View style={styles.transactionInfoContainer}>
-                    {tx.type === "restock" ? (
-                      <PackagePlus
-                        color={Colors.text}
-                        strokeWidth={1.5}
-                        size={36}
-                      />
-                    ) : (
-                      <ShoppingBag
-                        color={Colors.text}
-                        strokeWidth={1.5}
-                        size={36}
-                      />
-                    )}
-                    <View>
-                      <Text style={styles.transactionTitle}>
-                        {tx.itemsCount} Items{" "}
-                        {tx.type === "sale" ? "Sold" : "Restocked"}
-                      </Text>
-                      <Text style={styles.transactionTimestamp}>
-                        {format(parseISO(tx.date), "p")}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.userInfoContainer}>
-                    <View style={styles.userAvatar}>
-                      <Text style={styles.userAvatarText}>
-                        {tx.userInitial}
-                      </Text>
-                    </View>
-                    <Text style={styles.userNameText}>
-                      By {tx.user.split(" ")[0]}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.transactionDetailsRow}>
-                  <View style={styles.categoryIconsContainer}>
-                    {tx.categories.slice(0, 3).map((categoryName, index) => {
-                      const category = categoryMap[categoryName];
-                      return (
-                        category && (
-                          <View key={index} style={styles.categoryIconView}>
-                            {category.icon(Colors.text)}
-                          </View>
-                        )
-                      );
-                    })}
-                    {tx.categories.length > 3 && (
-                      <View style={styles.categoryIconView}>
-                        <Text style={styles.moreCategoriesText}>
-                          +{tx.categories.length - 3}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.transactionAmountText}>
-                    {tx.price}ETB
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <TransactionItem key={tx.id} transaction={tx} />
             ))}
           </View>
         ))}
+        {transactions.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No transactions found</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
+  );
+};
+
+const TransactionItem = ({ transaction }) => {
+  return (
+    <TouchableOpacity 
+      style={styles.transactionItemContainer} 
+      onPress={() => router.push({ 
+        pathname: "/(drawer)/transactionsDetail", 
+        params: { id: transaction.id } 
+      })}
+    >
+      <View style={styles.transactionItemRow}>
+        <View style={styles.transactionInfoContainer}>
+          {transaction.type === "restock" ? (
+            <PackagePlus color={Colors.text} strokeWidth={1.5} size={36} />
+          ) : (
+            <ShoppingBag color={Colors.text} strokeWidth={1.5} size={36} />
+          )}
+          <View>
+            <Text style={styles.transactionTitle}>
+              {transaction.items_count} Items {transaction.type === "sale" ? "Sold" : "Restocked"}
+            </Text>
+            <Text style={styles.transactionTimestamp}>
+              {format(parseISO(transaction.date), "p")}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.userInfoContainer}>
+          <View style={styles.userAvatar}>
+            <Text style={styles.userAvatarText}>
+              {transaction.user?.name?.charAt(0) || "U"}
+            </Text>
+          </View>
+          <Text style={styles.userNameText}>
+            By {transaction.user?.name?.split(" ")[0] || "Unknown"}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.transactionDetailsRow}>
+        <View style={styles.categoryIconsContainer}>
+          {transaction.categories?.slice(0, 3).map((categoryName) => {
+            const category = categoryMap[categoryName];
+            return category ? (
+              <View key={categoryName} style={styles.categoryIconView}>
+                {category.icon(Colors.text)}
+              </View>
+            ) : null;
+          })}
+          {transaction.categories?.length > 3 && (
+            <View style={styles.categoryIconView}>
+              <Text style={styles.moreCategoriesText}>
+                +{transaction.categories.length - 3}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.transactionAmountText}>
+          {transaction.total_amount}ETB
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 };
 
@@ -554,6 +402,37 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 14,
     color: "gray",
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 16,
+    fontFamily: Fonts.outfit.medium,
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: Colors.light,
+    fontSize: 16,
+    fontFamily: Fonts.outfit.semiBold,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 32,
+  },
+  emptyText: {
+    color: Colors.tertiary,
+    fontSize: 16,
+    fontFamily: Fonts.outfit.medium,
   },
 });
 

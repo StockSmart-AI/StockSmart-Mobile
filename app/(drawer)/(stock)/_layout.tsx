@@ -9,6 +9,8 @@ export default function Stock() {
       <Stack.Screen name="productDetails" options={{ headerShown: false }} />
       <Stack.Screen name="sell" options={{ headerShown: false }} />
       <Stack.Screen name="restock" options={{ headerShown: false }} />
+      <Stack.Screen name="deleteItem" options={{ headerShown: false }} />
+      <Stack.Screen name="updateProduct" options={{ headerShown: false }} />
     </Stack>
   );
 }

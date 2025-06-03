@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { AuthContext } from "@/context/AuthContext";
 
 export default function TabLayout() {
+  const { user } = useContext(AuthContext);
   return (
     <>
       <Header />
@@ -19,10 +20,14 @@ export default function TabLayout() {
           name="Inventory"
           options={{ title: "Inventory", headerShown: false }}
         />
-        <Tabs.Screen
-          name="Reports"
-          options={{ title: "Reports", headerShown: false }}
-        />
+        {
+          user?.role === "owner" && (
+            <Tabs.Screen
+              name="Reports"
+              options={{ title: "Reports", headerShown: false }}
+            />
+          )
+        }
         <Tabs.Screen
           name="Transactions"
           options={{ title: "Transactions", headerShown: false }}

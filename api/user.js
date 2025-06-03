@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import { refresh as authRefresh } from "./auth";
 
 // Assuming your user blueprint is registered under '/users' prefix in your Flask app.
 // Adjust if your backend route is different.
@@ -20,6 +21,108 @@ export const getUserByEmail = async (token, email) => {
             error.response?.data || error.message
         );
         throw error;
+    }
+};
+
+// Update User request
+export const updateUser = async (token, name) => {
+    try {
+        const response = await axios.put(
+            `${userApiURL}/update`,
+            { name },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        return response;
+    } catch (error) {
+        if (error.response && error.response.status === 401) {
+            console.log("Access token expired for updateUser, attempting refresh...");
+            try {
+                const refreshToken = await SecureStore.getItemAsync("refreshToken");
+                if (!refreshToken) {
+                    console.error("No refresh token found for updateUser.");
+                    throw new Error("Session expired. Please login again.");
+                }
+
+                const refreshResponse = await authRefresh(refreshToken);
+                const newAccessToken = refreshResponse.data.access_token;
+
+                await SecureStore.setItemAsync("accessToken", newAccessToken);
+
+                console.log("Token refreshed for updateUser, retrying original request...");
+                const retryResponse = await axios.put(
+                    `${userApiURL}/update`,
+                    { name },
+                    { headers: { Authorization: `Bearer ${newAccessToken}` } }
+                );
+                return retryResponse;
+            } catch (refreshError) {
+                console.error(
+                    "Token refresh failed for updateUser:",
+                    refreshError.response?.data || refreshError.message
+                );
+                await SecureStore.deleteItemAsync("accessToken");
+                await SecureStore.deleteItemAsync("refreshToken");
+                throw new Error("Session expired. Please login again.");
+            }
+        } else {
+            console.error(
+                "Update user error:",
+                error.response?.data || error.message
+            );
+            throw error;
+        }
+    }
+};
+
+// Delete User request
+export const deleteUser = async (token) => {
+    try {
+        const response = await axios.delete(`${userApiURL}/delete`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response;
+    } catch (error) {
+        if (error.response && error.response.status === 401) {
+            console.log("Access token expired for deleteUser, attempting refresh...");
+            try {
+                const refreshToken = await SecureStore.getItemAsync("refreshToken");
+                if (!refreshToken) {
+                    console.error("No refresh token found for deleteUser.");
+                    throw new Error("Session expired. Please login again.");
+                }
+
+                const refreshResponse = await authRefresh(refreshToken);
+                const newAccessToken = refreshResponse.data.access_token;
+
+                await SecureStore.setItemAsync("accessToken", newAccessToken);
+
+                console.log("Token refreshed for deleteUser, retrying original request...");
+                const retryResponse = await axios.delete(`${userApiURL}/delete`, {
+                    headers: { Authorization: `Bearer ${newAccessToken}` },
+                });
+                return retryResponse;
+            } catch (refreshError) {
+                console.error(
+                    "Token refresh failed for deleteUser:",
+                    refreshError.response?.data || refreshError.message
+                );
+                await SecureStore.deleteItemAsync("accessToken");
+                await SecureStore.deleteItemAsync("refreshToken");
+                throw new Error("Session expired. Please login again.");
+            }
+        } else {
+            console.error(
+                "Delete user error:",
+                error.response?.data || error.message
+            );
+            throw error;
+        }
     }
 };
 

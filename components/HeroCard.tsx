@@ -9,11 +9,86 @@ import {
   Button,
   Touchable,
   TouchableOpacity,
+  ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import { PackagePlus, ShoppingCart } from "lucide-react-native";
 import { router } from "expo-router";
+import { getSummaryCards } from "@/api/analytics";
+import { AuthContext } from "@/context/AuthContext";
+import { useShop } from "@/context/ShopContext";
 
-export default function HeroCard() {
+interface HeroCardProps {
+  inventoryValue: string;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const Skeleton = ({ width, height, style }: { width: number | string; height: number; style?: any }) => {
+  const animatedValue = new Animated.Value(0);
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const translateX = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-Number(width), Number(width)],
+  });
+
+  return (
+    <View
+      style={[
+        {
+          width,
+          height,
+          backgroundColor: "#E1E9EE",
+          overflow: "hidden",
+          borderRadius: 4,
+        },
+        style,
+      ]}
+    >
+      <Animated.View
+        style={{
+          width: "100%",
+          height: "100%",
+          transform: [{ translateX }],
+          backgroundColor: "#F5F5F5",
+          opacity: 0.5,
+        }}
+      />
+    </View>
+  );
+};
+
+export default function HeroCard({ inventoryValue, isLoading, error }: HeroCardProps) {
+  if (isLoading) {
+    return (
+      <View style={[styles.heroCard, { backgroundColor: Colors.primary }]}>
+        <View style={styles.skeletonContainer}>
+          <View style={styles.skeletonHeader}>
+            <View style={styles.skeletonTitle} />
+            <View style={styles.skeletonDate} />
+          </View>
+          <View style={styles.skeletonValue} />
+          <View style={styles.skeletonButtons}>
+            <View style={styles.skeletonButton} />
+            <View style={styles.skeletonButton} />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <LinearGradient
       colors={["#F5FFF8", "#7ED1A7"]}
@@ -76,6 +151,17 @@ export default function HeroCard() {
           Last updated: Today
         </Text>
       </View>
+      {error ? (
+        <Text
+          style={{
+            fontFamily: Fonts.publicSans.regular,
+            fontSize: 16,
+            color: Colors.error,
+          }}
+        >
+          {error}
+        </Text>
+      ) : (
       <Text
         style={{
           fontFamily: Fonts.publicSans.bold,
@@ -83,8 +169,9 @@ export default function HeroCard() {
           color: Colors.text,
         }}
       >
-        $150,000
+          {inventoryValue}ETB
       </Text>
+      )}
       <View
         style={{
           flex: 1,
@@ -150,5 +237,45 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
     bottom: 0,
+  },
+  skeletonContainer: {
+    flex: 1,
+    gap: 10,
+  },
+  skeletonHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  skeletonTitle: {
+    width: '40%',
+    height: 20,
+    backgroundColor: Colors.light,
+    borderRadius: 4,
+  },
+  skeletonDate: {
+    width: '25%',
+    height: 14,
+    backgroundColor: Colors.light,
+    borderRadius: 4,
+  },
+  skeletonValue: {
+    width: '80%',
+    height: 40,
+    backgroundColor: Colors.light,
+    borderRadius: 4,
+  },
+  skeletonButtons: {
+    flex: 1,
+    flexDirection: "row",
+    width: "100%",
+    gap: 16,
+    alignItems: "flex-end",
+  },
+  skeletonButton: {
+    flex: 1,
+    height: 48,
+    backgroundColor: Colors.light,
+    borderRadius: 100,
   },
 });

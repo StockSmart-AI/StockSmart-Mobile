@@ -1,54 +1,65 @@
-import React from "react";
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Milk, Boxes, FlaskConical, ShoppingBag, PackagePlus } from "lucide-react-native";
 import { Colors, Fonts } from "@/constants/Theme";
-
-// Mock data for demonstration
-const transaction = {
-  id: 1,
-  value: -590,
-  date: "September 21, 2024 7:32PM",
-  user: "Sara",
-  userInitial: "F",
-  items: [
-    {
-      id: 1,
-      category: "Beverages",
-      name: "Pepsi Soda",
-      qty: 4,
-      price: 40,
-      image: require("@/assets/images/chips.png"),
-    },
-    {
-      id: 2,
-      category: "Cosmetics",
-      name: "Ennet Nail Polish",
-      qty: 2,
-      price: 180,
-      image: require("@/assets/images/chips.png"),
-    },
-    {
-      id: 3,
-      category: "Processed Food",
-      name: "Potos Chips",
-      qty: 4,
-      price: 25,
-      image: require("@/assets/images/chips.png"),
-    },
-    {
-      id: 4,
-      category: "Miscellaneous",
-      name: "Kleenex Onedu",
-      qty: 2,
-      price: 25,
-      image: require("@/assets/images/chips.png"),
-    },
-  ],
-};
+import { getTransactionById } from "@/api/transactions";
+import * as SecureStore from "expo-secure-store";
+import { format } from "date-fns";
 
 export default function TransactionDetail() {
-  // const { id } = useLocalSearchParams(); // Use this to fetch real data
+  const { id } = useLocalSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [transaction, setTransaction] = useState(null);
+
+  const fetchTransactionDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = await SecureStore.getItemAsync("accessToken");
+      const response = await getTransactionById(token, id);
+      setTransaction(response.data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch transaction details");
+      console.error("Error fetching transaction details:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchTransactionDetails();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchTransactionDetails}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!transaction) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>Transaction not found</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -57,49 +68,91 @@ export default function TransactionDetail() {
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft color={Colors.text} size={28} />
         </TouchableOpacity>
-        
         <View style={{ width: 28 }} /> {/* Spacer for symmetry */}
       </View>
 
       {/* Summary Card */}
       <View style={styles.summaryCard}>
         <View style={styles.iconCircle}>
-          {/* You can use an icon here */}
-          <Text style={{ fontSize: 28 }}>💸</Text>
+          {transaction.type === "restock" ? (
+            <PackagePlus color={Colors.accent} size={28} strokeWidth={1.5} />
+          ) : (
+            <ShoppingBag color={Colors.accent} size={28} strokeWidth={1.5} />
+          )}
         </View>
-        <Text style={styles.valueText}>{transaction.value}ETB</Text>
-        <Text style={styles.subText}>from inventory value</Text>
-        <Text style={styles.dateText}>{transaction.date}</Text>
+        <Text style={[
+          styles.valueText,
+          { color: transaction.type === "restock" ? Colors.accent : "#FF4D4F" }
+        ]}>
+          {transaction.total_amount}ETB
+        </Text>
+        <Text style={styles.subText}>
+          {transaction.type === "restock" ? "Restock Cost" : "Sale Amount"}
+        </Text>
+        <Text style={styles.dateText}>
+          {format(new Date(transaction.date), "MMMM dd, yyyy p")}
+        </Text>
         <View style={styles.userRow}>
           <View style={styles.userCircle}>
-            <Text style={styles.userInitial}>{transaction.userInitial}</Text>
+            <Text style={styles.userInitial}>
+              {transaction.user?.name?.charAt(0) || "U"}
+            </Text>
           </View>
-          <Text style={styles.byText}>By {transaction.user}</Text>
+          <Text style={styles.byText}>
+            By {transaction.user?.name || "Unknown"}
+          </Text>
         </View>
       </View>
 
-      {/* Items Sold */}
-      <Text style={styles.itemsSoldTitle}>{transaction.items.length} items sold</Text>
+      {/* Items List */}
+      <Text style={styles.itemsSoldTitle}>
+        {transaction.items?.length || 0} items {transaction.type === "restock" ? "restocked" : "sold"}
+      </Text>
+
+      {/* Category Icons */}
       <View style={styles.categoryIconsRow}>
-        <FlaskConical color={Colors.text} size={22} strokeWidth={1.5} />
-        <ShoppingBag color={Colors.text} size={22} strokeWidth={1.5} />
-        <Boxes color={Colors.text} size={22} strokeWidth={1.5} />
+        {transaction.categories?.map((category, index) => {
+          const Icon = getCategoryIcon(category);
+          return Icon ? (
+            <Icon key={index} color={Colors.text} size={22} strokeWidth={1.5} />
+          ) : null;
+        })}
       </View>
 
-      {/* Sold Items List */}
-      {transaction.items.map((item) => (
+      {/* Items List */}
+      {transaction.items?.map((item) => (
         <View key={item.id} style={styles.itemRow}>
-          <Image source={item.image} style={styles.itemImage} />
+          <Image 
+            source={item.image_url ? { uri: item.image_url } : require("@/assets/images/placeholder.png")} 
+            style={styles.itemImage} 
+          />
           <View style={{ flex: 1 }}>
             <Text style={styles.itemCategory}>{item.category}</Text>
-            <Text style={styles.itemName}>{item.name} × {item.qty}</Text>
+            <Text style={styles.itemName}>
+              {item.name} × {item.quantity}
+            </Text>
           </View>
-          <Text style={styles.itemPrice}>{item.price}ETB</Text>
+          <Text style={styles.itemPrice}>
+            {item.price}ETB
+          </Text>
         </View>
       ))}
     </ScrollView>
   );
 }
+
+const getCategoryIcon = (category) => {
+  const icons = {
+    "Dairy": Milk,
+    "Beverage": FlaskConical,
+    "Processed": Boxes,
+    "Baby": Milk,
+    "Cleaning": Boxes,
+    "Cosmetics": Boxes,
+    "Other": Boxes,
+  };
+  return icons[category] || Boxes;
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -107,17 +160,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 24,
     marginBottom: 16,
     justifyContent: "space-between",
-  },
-  headerTitle: {
-    fontFamily: Fonts.outfit.semiBold,
-    fontSize: 18,
-    color: Colors.text,
   },
   summaryCard: {
     backgroundColor: "#fff",
@@ -140,7 +192,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   valueText: {
-    color: "#FF4D4F",
     fontSize: 32,
     fontFamily: Fonts.outfit.semiBold,
     marginBottom: 4,
@@ -225,5 +276,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.text,
     marginLeft: 8,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 16,
+    fontFamily: Fonts.outfit.medium,
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: Colors.light,
+    fontSize: 16,
+    fontFamily: Fonts.outfit.semiBold,
   },
 });

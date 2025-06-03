@@ -15,7 +15,7 @@ export default function NewProductSuccessScreen() {
   const handleRestock = () => {
     // Navigate to the restock screen, passing the product ID
     if (productId) {
-      router.push({ pathname: '/(drawer)/(stock)/restock', params: { productId: productId as string } });
+      router.push({ pathname: '/(drawer)/(stock)/restock', params: { id: productId as string } });
     } else {
       // Handle case where product ID is missing (shouldn't happen if navigated correctly)
       console.error("Product ID missing for restock.");

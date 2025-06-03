@@ -12,6 +12,7 @@ import { useContext, useState } from "react";
 import { useRouter } from "expo-router";
 import { Fonts, Colors } from "@/constants/Theme";
 import { AuthContext } from "@/context/AuthContext";
+import { Eye, EyeOff } from "lucide-react-native";
 
 export default function CreateAccount() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function CreateAccount() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleContinue = () => {
     if (!firstName || !surname || !email || !password) {
@@ -82,20 +85,44 @@ export default function CreateAccount() {
             value={email}
             onChangeText={setEmail}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry={true}
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            secureTextEntry={true}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Password"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff size={24} color={Colors.secondary} strokeWidth={1.5} />
+              ) : (
+                <Eye size={24} color={Colors.secondary} strokeWidth={1.5} />
+              )}
+            </TouchableOpacity>
+          </View>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Confirm Password"
+              secureTextEntry={!showConfirmPassword}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? (
+                <EyeOff size={24} color={Colors.secondary} strokeWidth={1.5} />
+              ) : (
+                <Eye size={24} color={Colors.secondary} strokeWidth={1.5} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={{ justifyContent: "center" }}>
           <Text style={styles.txt1}>
@@ -181,5 +208,18 @@ const styles = StyleSheet.create({
   },
   loginBtnText: {
     color: Colors.text,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    paddingRight: 50, // Make room for the eye icon
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    zIndex: 1,
   },
 });

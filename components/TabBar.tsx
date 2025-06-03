@@ -5,6 +5,8 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { LayoutGrid, Store, ChartBar, History } from "lucide-react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { Colors, Fonts } from "@/constants/Theme";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function TabBar({
   state,
@@ -13,6 +15,15 @@ export default function TabBar({
 }: BottomTabBarProps) {
   const { buildHref } = useLinkBuilder();
   const { theme } = useTheme();
+  const { user } = useContext(AuthContext);
+
+  // Filter out Reports tab for employees
+  const filteredRoutes = state.routes.filter(route => {
+    if (route.name === "Reports" && user?.role !== "owner") {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <View
@@ -21,7 +32,7 @@ export default function TabBar({
         { backgroundColor: theme === "light" ? Colors.light : Colors.dark },
       ]}
     >
-      {state.routes.map((route, index) => {
+      {filteredRoutes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label =
           options.tabBarLabel !== undefined

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,21 +9,52 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Colors, Fonts } from "@/constants/Theme";
-import ShopAccessDenied from "./shopAccessDenied"; // Import the new component
+import { AuthContext } from "@/context/AuthContext";
+import { requestShopAccess } from "@/api/notifications";
+import SnackBar from "@/components/ui/Snackbar";
+
+interface Notification {
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
 
 const EmployeeDetailsPage = () => {
   const router = useRouter();
-  const [shopName, setShopName] = useState("");
+  const { token } = useContext(AuthContext);
+  const [shopId, setShopId] = useState("");
   const [isContinueEnabled, setIsContinueEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
-    // Enable the continue button only if there is input in the shop name field
-    setIsContinueEnabled(shopName.length > 0);
-  }, [shopName]);
+    setIsContinueEnabled(shopId.length > 0);
+  }, [shopId]);
 
-  const handleContinue = () => {
-    // Always navigate to ShopAccessDenied
-    router.push("/(auth)/shopAccessDenied");
+  const handleContinue = async () => {
+    if (!shopId.trim()) {
+      setNotification({
+        message: "Please enter a shop ID",
+        type: "error"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await requestShopAccess(shopId.trim(), token);
+      // If successful, navigate to access denied page with shop ID
+      router.push({
+        pathname: "/(auth)/shopAccessDenied",
+        params: { shopId: shopId.trim() }
+      });
+    } catch (error: any) {
+      setNotification({
+        message: error.response?.data?.error || "Invalid shop ID. Please try again.",
+        type: "error"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleScanQR = () => {
@@ -35,32 +66,39 @@ const EmployeeDetailsPage = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View>
-          <Text style={styles.header}>Select your shop</Text>
-          <Text style={styles.title}>Which shop do you work at?</Text>
-          <Text style={styles.label}>Shop Name</Text>
+          <Text style={styles.title}>Let's find{'\n'} the shop work at</Text>
+          <Text style={styles.label}>Shop ID</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Shoa-Merkato"
-            value={shopName}
-            onChangeText={setShopName}
+            placeholder="Enter shop ID"
+            value={shopId}
+            onChangeText={setShopId}
+            editable={!isLoading}
           />
         </View>
         <View style={styles.buttonsContainer}>
-          <TouchableOpacity style={styles.scanQRButton} onPress={handleScanQR}>
-            <Text style={styles.scanQRText}>Scan QR</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.continueButton,
-              !isContinueEnabled && styles.continueButtonDisabled,
+              (!isContinueEnabled || isLoading) && styles.continueButtonDisabled,
             ]}
             onPress={handleContinue}
-            disabled={!isContinueEnabled}
+            disabled={!isContinueEnabled || isLoading}
           >
-            <Text style={styles.continueText}>Continue</Text>
+            <Text style={styles.continueText}>
+              {isLoading ? "Requesting..." : "Continue"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {notification && (
+        <SnackBar
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -134,7 +172,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   continueButtonDisabled: {
-    backgroundColor: "gray", // Change the color to gray when disabled
+    backgroundColor: Colors.secondary,
+    opacity: 0.7,
   },
 });
 

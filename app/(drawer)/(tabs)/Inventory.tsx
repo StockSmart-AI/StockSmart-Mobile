@@ -10,12 +10,12 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
-import { Search, Plus } from "lucide-react-native";
+import { Search, Plus, RefreshCw, X } from "lucide-react-native";
 import { Colors, Fonts } from "@/constants/Theme";
 import { router } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
 import { getAllProducts } from "@/api/stock";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext  } from "@/context/AuthContext";
 import { useShop } from "@/context/ShopContext";
 
 interface Product {
@@ -39,6 +39,38 @@ const categories = [
   "Cosmetics"
 ];
 
+const EmptyState = ({ onRefresh }: { onRefresh: () => void }) => (
+  <View style={styles.emptyStateContainer}>
+    <Image 
+      source={require('@/assets/images/empty-box.png')} 
+      style={styles.emptyStateImage}
+      resizeMode="contain"
+    />
+    <Text style={styles.emptyStateTitle}>No Products Found</Text>
+    <Text style={styles.emptyStateText}>
+      Start by adding products to your inventory or try refreshing the page
+    </Text>
+    <TouchableOpacity 
+      style={styles.refreshButton}
+      onPress={onRefresh}
+    >
+      <RefreshCw size={20} color={Colors.light} strokeWidth={1.5} />
+      <Text style={styles.refreshButtonText}>Refresh</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const RestockModeButton = ({ onClose }: { onClose: () => void }) => (
+  <View style={styles.restockModeContainer}>
+    <View style={styles.restockModeContent}>
+      <Text style={styles.restockModeText}>Restock Mode</Text>
+      <TouchableOpacity onPress={onClose} style={styles.restockModeCloseButton}>
+        <X size={20} color={Colors.light} strokeWidth={1.5} />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
 export default function Inventory() {
   const { token } = useContext(AuthContext);
   const { currentShop } = useShop();
@@ -53,6 +85,7 @@ export default function Inventory() {
   const [totalPages, setTotalPages] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showRestockMode, setShowRestockMode] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -71,6 +104,12 @@ export default function Inventory() {
       setSelectedCategories([selectedCategory]);
     }
   }, [selectedCategory]);
+
+  useEffect(() => {
+    if (source === 'restock') {
+      setShowRestockMode(true);
+    }
+  }, [source]);
 
   const fetchProducts = async (currentPage: number) => {
     if (!token || !currentShop?.id) {
@@ -135,6 +174,11 @@ export default function Inventory() {
     }
   };
 
+  const handleCloseRestockMode = () => {
+    setShowRestockMode(false);
+    router.setParams({ source: 'tab' });
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
@@ -188,85 +232,86 @@ export default function Inventory() {
   };
 
   return (
-  <View style={{flex: 1, backgroundColor: Colors.light}}>
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Search size={24} color={Colors.text} strokeWidth={1.5} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search Products"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+    <View style={{flex: 1, backgroundColor: Colors.light}}>
+      {showRestockMode && <RestockModeButton onClose={handleCloseRestockMode} />}
+      <View style={styles.container}>
+        <View style={styles.searchContainer}>
+          <Search size={24} color={Colors.text} strokeWidth={1.5} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Products"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesContainer}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryChip,
-              selectedCategories.includes(category) && styles.activeCategoryChip,
-            ]}
-            onPress={() => {
-              if (selectedCategories.includes(category)) {
-                setSelectedCategories(selectedCategories.filter(cat => cat !== category));
-              } else {
-                setSelectedCategories([...selectedCategories, category]);
-              }
-            }}
-          >
-            <Text
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoriesContainer}
+          contentContainerStyle={styles.categoriesContent}
+        >
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category}
               style={[
-                styles.categoryText,
-                selectedCategories.includes(category) && styles.activeCategoryText,
+                styles.categoryChip,
+                selectedCategories.includes(category) && styles.activeCategoryChip,
               ]}
+              onPress={() => {
+                if (selectedCategories.includes(category)) {
+                  setSelectedCategories(selectedCategories.filter(cat => cat !== category));
+                } else {
+                  setSelectedCategories([...selectedCategories, category]);
+                }
+              }}
             >
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategories.includes(category) && styles.activeCategoryText,
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-      {isLoading ? (
-        <ActivityIndicator size="large" color={Colors.accent} style={{ flex: 1, justifyContent: 'center', paddingVertical: 24 }} />
-      ) : error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : filteredProducts.length === 0 ? (
-         <Text style={styles.noProductsText}>No products found matching your criteria.</Text>
-      ) : (
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderProductCard}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          style={{width: '100%'}}
-          contentContainerStyle={[
-            styles.productGrid,
-          ]}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListHeaderComponent={() => (
-            isRefreshing ? (
-              <View style={styles.refreshIndicator}>
-                <ActivityIndicator size="small" color={Colors.accent} />
-                <Text style={styles.refreshText}>Refreshing...</Text>
-              </View>
-            ) : null
-          )}
-          ListFooterComponent={renderFooter}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-        />
-      )}
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Colors.accent} style={{ flex: 1, justifyContent: 'center', paddingVertical: 24 }} />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState onRefresh={handleRefresh} />
+        ) : (
+          <FlatList
+            data={filteredProducts}
+            renderItem={renderProductCard}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            style={{width: '100%'}}
+            contentContainerStyle={[
+              styles.productGrid,
+            ]}
+            showsVerticalScrollIndicator={false}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            ListHeaderComponent={() => (
+              isRefreshing ? (
+                <View style={styles.refreshIndicator}>
+                  <ActivityIndicator size="small" color={Colors.accent} />
+                  <Text style={styles.refreshText}>Refreshing...</Text>
+                </View>
+              ) : null
+            )}
+            ListFooterComponent={renderFooter}
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+          />
+        )}
+      </View>
     </View>
-  </View>
   );
 }
 const styles = StyleSheet.create({
@@ -403,6 +448,79 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.publicSans.regular,
     fontSize: 14,
     color: Colors.secondary,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    padding: 16,
+    top: '150%',
+  },
+  emptyStateImage: {
+    width: 150,
+    height: 150,
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontFamily: Fonts.publicSans.semiBold,
+    fontSize: 20,
+    color: Colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontFamily: Fonts.publicSans.regular,
+    fontSize: 16,
+    color: Colors.secondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 50,
+    gap: 8,
+  },
+  refreshButtonText: {
+    fontFamily: Fonts.publicSans.medium,
+    fontSize: 16,
+    color: Colors.light,
+  },
+  restockModeContainer: {
+    position: 'absolute',
+    bottom: 80,
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+    backgroundColor: Colors.accent,
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  restockModeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  restockModeText: {
+    color: Colors.light,
+    fontFamily: Fonts.publicSans.medium,
+    fontSize: 16,
+  },
+  restockModeCloseButton: {
+    padding: 4,
   },
 });
 

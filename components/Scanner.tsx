@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useContext } from "react";
 import Svg, { Path } from "react-native-svg";
 import {
   View,
@@ -20,12 +20,24 @@ import { router } from "expo-router";
 import { BarcodeScanningResult } from "expo-camera";
 import { CameraView, Camera } from "expo-camera";
 import Cart from "@/components/Cart";
+import { getProductByBarcode } from "@/api/stock";
+import { AuthContext } from "@/context/AuthContext";
+import { useShop } from "@/context/ShopContext";
+import SnackBar from "@/components/ui/Snackbar";
 
-const Scanner = () => {
+interface ScannerProps {
+  type?: 'quick' | 'delete';
+  onBarcodeScanned?: (result: BarcodeScanningResult) => void;
+}
+
+const Scanner: React.FC<ScannerProps> = ({ type = 'quick', onBarcodeScanned }) => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [data, setData] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
+  const [error, setError] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+  const { token } = useContext(AuthContext);
+  const { currentShop } = useShop();
 
   useEffect(() => {
     (async () => {
@@ -34,10 +46,43 @@ const Scanner = () => {
     })();
   }, []);
 
-  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
+  const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
+    if (type === 'delete' && onBarcodeScanned) {
+      onBarcodeScanned(result);
+      return;
+    }
+
+    if (!token || !currentShop?.id) {
+      setError({ message: "Authentication or shop information missing", type: "error" });
+      return;
+    }
+
     setScanned(true);
-    setData(data);
-    router.push("/productDetails");
+    setData(result.data);
+
+    try {
+      const response = await getProductByBarcode(token, result.data, currentShop.id);
+      if (response.data && response.data[0]) {
+        router.push({
+          pathname: "/(drawer)/(stock)/productDetails",
+          params: { id: response.data[0][result.data].id }
+        });
+      } else {
+        setError({ message: "Product not found", type: "error" });
+        setTimeout(() => setScanned(false), 2000);
+      }
+    } catch (err: any) {
+      setError({ 
+        message: err.response?.data?.error || "Failed to fetch product details", 
+        type: "error" 
+      });
+      setTimeout(() => setScanned(false), 2000);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setError(null);
+    setScanned(false); // Reset scanned state to allow scanning again
   };
 
   const toggleFlash = () => {
@@ -169,6 +214,14 @@ const Scanner = () => {
           Torch
         </Text>
       </TouchableOpacity>
+
+      {error && (
+        <SnackBar
+          type={error.type}
+          message={error.message}
+          onClose={handleSnackbarClose}
+        />
+      )}
     </View>
   );
 };

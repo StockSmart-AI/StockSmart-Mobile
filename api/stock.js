@@ -111,8 +111,14 @@ export const addProduct = async (token, formData) => {
 // Update product
 export const updateProduct = async (token, productId, data) => {
      const apiCall = async (accessToken) => {
+        // Check if data is FormData (has image) or regular object
+        const isFormData = data instanceof FormData;
+        
         return axios.put(`${productApiURL}/update/${productId}`, data, {
-            headers: { Authorization: `Bearer ${accessToken}` },
+            headers: { 
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+            },
         });
     };
     return callApiWithTokenRefresh(apiCall, token);
@@ -137,7 +143,7 @@ export const restockProducts = async (token, restockData) => {
     };
     return callApiWithTokenRefresh(apiCall, token);
 };
-
+//
 // Sell products
 export const sellProducts = async (token, sellData) => {
      const apiCall = async (accessToken) => {
@@ -156,7 +162,7 @@ export const deleteItemByBarcode = async (token, barcode) => {
          // without seeing how the barcode is extracted. Assuming it's expected as a query param or in the body for DELETE.
          // The Flask function signature `def delete_item(barcode):` suggests it might be a URL param.
          // Let's assume URL parameter for now, consistent with other ID-based routes.
-        return axios.delete(`${productApiURL}/delete/barcode/${barcode}`, {
+        return axios.delete(`${productApiURL}/delete-item/${barcode}`, {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
     };

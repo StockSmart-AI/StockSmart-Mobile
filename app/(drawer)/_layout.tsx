@@ -18,14 +18,19 @@ import {
   SunMedium,
 } from "lucide-react-native";
 import { AuthContext } from "@/context/AuthContext";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { CartProvider } from "@/context/CartContext";
+import { Ionicons } from "@expo/vector-icons";
 
 const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   const { theme, toggleTheme } = useTheme();
   const { logout, user } = useContext(AuthContext);
+  const router = useRouter();
+
   const handleLogout = () => {
     logout();
   };
+
   return (
     <DrawerContentScrollView
       {...props}
@@ -90,15 +95,28 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
             </>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.drawerOption}>
-          <FileUser color={Colors.text} size={24} strokeWidth={1.5} />
-          <Text style={styles.drawerText}>Staff Management</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.drawerOption}>
-          <Store color={Colors.text} size={24} strokeWidth={1.5} />
-          <Text style={styles.drawerText}>Store Management</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.drawerOption}>
+        {user?.role === "owner" && (
+          <>
+            <TouchableOpacity 
+              style={styles.drawerOption}
+              onPress={() => router.push("/staff-management")}
+            >
+              <FileUser color={Colors.text} size={24} strokeWidth={1.5} />
+              <Text style={styles.drawerText}>Staff Management</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.drawerOption}
+              onPress={() => router.push("/store-management")}
+            >
+              <Store color={Colors.text} size={24} strokeWidth={1.5} />
+              <Text style={styles.drawerText}>Store Management</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        <TouchableOpacity 
+          style={styles.drawerOption}
+          onPress={() => router.push("/settings")}
+        >
           <Settings color={Colors.text} size={24} strokeWidth={1.5} />
           <Text style={styles.drawerText}>Settings</Text>
         </TouchableOpacity>
@@ -117,19 +135,46 @@ export default function Layout() {
 
   return (
     <ProtectedRoute>
-      <Drawer
-        drawerContent={(props) => <CustomDrawerContent {...props} />}
-        screenOptions={() => ({
-          headerShown: false,
-          swipeEnabled: false,
-          drawerStyle: [
-            styles.drawerStyle,
-            { backgroundColor: theme === "light" ? Colors.light : Colors.dark },
-          ],
-          drawerType: "front",
-        })}
-      />
-      <Stack.Screen name="(shopCreation)" />
+      <CartProvider>
+        <Drawer
+          drawerContent={(props) => <CustomDrawerContent {...props} />}
+          screenOptions={() => ({
+            headerShown: false,
+            swipeEnabled: false,
+            drawerStyle: [
+              styles.drawerStyle,
+              { backgroundColor: theme === "light" ? Colors.light : Colors.dark },
+            ],
+            drawerType: "front",
+          })}
+        >
+          <Drawer.Screen
+            name="staff-management"
+            options={{
+              title: "Staff Management",
+            }}
+          />
+          <Drawer.Screen
+            name="store-management"
+            options={{
+              title: "Store Management",
+              drawerIcon: ({ color }) => (
+                <Ionicons name="business-outline" size={24} color={color} />
+              ),
+            }}
+          />
+          <Drawer.Screen
+            name="settings"
+            options={{
+              title: "Settings",
+              drawerIcon: ({ color }) => (
+                <Ionicons name="settings-outline" size={24} color={color} />
+              ),
+            }}
+          />
+        </Drawer>
+        <Stack.Screen name="(shopCreation)" />
+      </CartProvider>
     </ProtectedRoute>
   );
 }

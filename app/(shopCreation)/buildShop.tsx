@@ -14,6 +14,7 @@ const BuildShopLoadingScreen = () => {
   const router = useRouter(); // Get router
   const { fetchShops } = useShop(); // Get refreshShops from useShop
   const [loadingText, setLoadingText] = useState("Building your shop..."); // State for loading text
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const handleShopCreationProcess = async () => {
@@ -23,13 +24,20 @@ const BuildShopLoadingScreen = () => {
         return;
       }
 
+      // Prevent duplicate submissions
+      if (isSubmitting) {
+        return;
+      }
+
+      setIsSubmitting(true);
+
       try {
         // 1. Create the shop
         setLoadingText("Building your shop...");
         const shopCreationResponse = await createShop(shopDetails.shopName, `${shopDetails.street}, ${shopDetails.building}, ${shopDetails.unit}`, token);
-
-        if (shopCreationResponse && shopCreationResponse.data && shopCreationResponse.data.shop_id) {
-          const shopId = shopCreationResponse.data.shop_id;
+        
+        if (shopCreationResponse && shopCreationResponse.data && shopCreationResponse.data.shop) {
+          const shopId = shopCreationResponse.data.shop;
            
           console.log("Shop created successfully with ID:", shopId);
 
@@ -41,7 +49,7 @@ const BuildShopLoadingScreen = () => {
           for (const employee of employees) {
             const employeeEmail = employee.email;
             // Default permission to false if not found
-            const canRestock = permissions[employeeEmail] || false;
+            const canRestock = permissions[employeeEmail] || true;
 
             try {
               await sendInvitationAndPermissions(token, shopId, employeeEmail, canRestock);
@@ -78,11 +86,13 @@ const BuildShopLoadingScreen = () => {
         setTimeout(() => {
           router.back(); // Navigate back on error
         }, 1500);
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
     handleShopCreationProcess();
-  }, [token, shopDetails, router, logout, fetchShops]); // Add refreshShops to dependencies
+  }, [token, shopDetails, router, logout, fetchShops, isSubmitting]); // Add refreshShops to dependencies
 
   return (
     <View style={styles.container}>

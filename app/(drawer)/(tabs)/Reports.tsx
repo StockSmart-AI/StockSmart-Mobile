@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,25 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Colors, Fonts } from "@/constants/Theme";
 import { useTheme } from "@/context/ThemeContext";
 import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 import { Svg } from "react-native-svg";
 import Swiper from 'react-native-swiper';
+import { router } from "expo-router";
+import { AuthContext } from "@/context/AuthContext";
+import { useShop } from "@/context/ShopContext";
+import {
+  getSummaryCards,
+  getPieChartData,
+  getLineChartData,
+  getBarChartData,
+  getCriticalProducts,
+  getTopSellingProducts,
+} from "@/api/analytics";
+import SnackBar from "@/components/ui/Snackbar";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -239,11 +252,11 @@ const StockSummaryCards: React.FC<StockSummaryCardsProps> = ({ summaryData, char
   </View>
 );
 
-const CategoryDistributionChart = ({ chartConfig }: { chartConfig: any }) => (
+const CategoryDistributionChart = ({ chartConfig, data }: { chartConfig: any, data: any[] }) => (
   <View style={styles.chartCard}>
     <Text style={styles.chartTitle}>Category Distribution</Text>
     <PieChart
-      data={pieChartData}
+      data={data}
       width={screenWidth * 0.8}
       height={200}
       chartConfig={chartConfig}
@@ -255,7 +268,7 @@ const CategoryDistributionChart = ({ chartConfig }: { chartConfig: any }) => (
       hasLegend={false}
     />
     <View style={styles.legendGrid}>
-      {pieChartData.map((item, index) => (
+      {data.map((item, index) => (
         <View key={index} style={styles.legendItem}>
           <View style={[styles.legendColor, { backgroundColor: item.color }]} />
           <Text style={styles.legendText}>{item.name} ({item.percentage}%)</Text>
@@ -265,11 +278,11 @@ const CategoryDistributionChart = ({ chartConfig }: { chartConfig: any }) => (
   </View>
 );
 
-const TopItemsByQuantityChart = ({ chartConfig }: { chartConfig: any }) => (
+const TopItemsByQuantityChart = ({ chartConfig, data }: { chartConfig: any, data: any }) => (
   <View style={styles.chartCard}>
     <Text style={styles.chartTitle}>Top Items by Quantity</Text>
     <BarChart
-      data={barChartData}
+      data={data}
       width={screenWidth - 56}
       height={200}
       chartConfig={chartConfig}
@@ -324,45 +337,69 @@ const StockCriticalProducts: React.FC<StockCriticalProductsProps> = ({ criticalP
 };
 
 // Reusable component for Top Selling Product Items in Analytics
-const TopSellingProductItem: React.FC<TopSellingProductItemProps> = ({ product, chartConfig, styles }) => (
-  <View style={styles.summaryCard}>
-    <LineChart
-      data={product.chartData}
-      width={screenWidth * 0.4}
-      height={60}
-      chartConfig={chartConfig}
-      withHorizontalLabels={false}
-      withVerticalLabels={false}
-      withDots={false}
-      bezier
-      style={styles.chartStyle}
-    />
-    <Text style={styles.summaryValue}>{product.name}</Text>
-    <Text style={styles.summaryLabel}>{product.unitsSold} units sold</Text>
-    <Text style={styles.summaryTrend}>{product.trend}</Text>
-  </View>
-);
+const TopSellingProductItem: React.FC<TopSellingProductItemProps> = ({ product, chartConfig, styles }) => {
+  // Create default chart data if none is provided
+  const defaultChartData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [{ data: [0, 0, 0, 0, 0, 0] }]
+  };
+
+  const chartData = product.chartData || defaultChartData;
+
+  return (
+    <View style={styles.summaryCard}>
+      <LineChart
+        data={chartData}
+        width={screenWidth * 0.4}
+        height={60}
+        chartConfig={chartConfig}
+        withHorizontalLabels={false}
+        withVerticalLabels={false}
+        withDots={false}
+        bezier
+        style={styles.chartStyle}
+      />
+      <Text style={styles.summaryValue}>{product.name}</Text>
+      <Text style={styles.summaryLabel}>{product.unitsSold} units sold</Text>
+      <Text style={styles.summaryTrend}>{product.trend}</Text>
+    </View>
+  );
+};
 
 // Component to render all Top Selling Products in Analytics
-const TopSellingProductsList: React.FC<TopSellingProductsListProps> = ({ topSellingProductsData, chartConfig, styles, smallChartConfig }) => (
-   <View style={styles.topSellingProductsList}>
-    {topSellingProductsData.map((product, index) => (
-      <TopSellingProductItem
-        key={index}
-        product={product}
-        chartConfig={smallChartConfig}
-        styles={styles}
-      />
-    ))}
-  </View>
-);
+const TopSellingProductsList: React.FC<TopSellingProductsListProps> = ({ topSellingProductsData, chartConfig, styles, smallChartConfig }) => {
+  // If no data is available, show a message
+  if (!topSellingProductsData || topSellingProductsData.length === 0) {
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.emptyStateText}>No top selling products data available</Text>
+      </View>
+    );
+  }
 
-const AnalyticsContent: React.FC<AnalyticsContentProps> = ({ chartConfig, styles, smallChartConfig }) => (
+  return (
+    <View style={styles.topSellingProductsList}>
+      {topSellingProductsData.map((product, index) => (
+        <TopSellingProductItem
+          key={index}
+          product={product}
+          chartConfig={smallChartConfig}
+          styles={styles}
+        />
+      ))}
+    </View>
+  );
+};
+
+const AnalyticsContent: React.FC<AnalyticsContentProps & { data: { barChartData: any, topSellingProducts: any[] } }> = 
+  ({ chartConfig, styles, smallChartConfig, data }) => (
   <ScrollView style={styles.analyticsScrollView}>
     <View style={styles.salesCard}>
       <View style={styles.salesIconPlaceholder} />
-      <Text style={styles.salesLabel}>Todays Sales</Text>
-      <Text style={styles.salesValue}>321 Units</Text>
+      <Text style={styles.salesLabel}>Today's Sales</Text>
+      <Text style={styles.salesValue}>
+        {data.barChartData?.datasets[0]?.data[data.barChartData?.datasets[0]?.data.length - 1] || 0} Units
+      </Text>
     </View>
 
     <View style={styles.timeToggleContainer}>
@@ -383,7 +420,7 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({ chartConfig, styles
     <View style={styles.chartCard}>
       <Text style={styles.chartTitle}>Sales Insight</Text>
       <BarChart
-        data={barChartData}
+        data={data.barChartData}
         width={screenWidth - 32}
         height={200}
         chartConfig={chartConfig}
@@ -398,7 +435,7 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({ chartConfig, styles
     <View style={styles.topSellingProductsContainer}>
       <Text style={styles.chartTitle}>Top Selling Products</Text>
       <TopSellingProductsList
-        topSellingProductsData={topSellingProductsListData}
+        topSellingProductsData={data.topSellingProducts}
         chartConfig={chartConfig}
         smallChartConfig={smallChartConfig}
         styles={styles}
@@ -410,15 +447,82 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({ chartConfig, styles
 export default function ReportsScreen() {
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('Stock');
+  const { user, token } = useContext(AuthContext);
+  const { currentShop } = useShop();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // State for all data
+  const [summaryData, setSummaryData] = useState<any[]>([]);
+  const [pieChartData, setPieChartData] = useState<any[]>([]);
+  const [lineChartData, setLineChartData] = useState<any>(null);
+  const [barChartData, setBarChartData] = useState<any>(null);
+  const [criticalProducts, setCriticalProducts] = useState<any[]>([]);
+  const [topSellingProducts, setTopSellingProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Redirect if user is not an owner
+    if (user?.role !== "owner") {
+      router.replace("/(drawer)/(tabs)");
+    }
+  }, [user?.role]);
+
+  useEffect(() => {
+    if (currentShop?.id) {
+      fetchData();
+    }
+  }, [currentShop?.id]);
+
+  const fetchData = async () => {
+    if (!currentShop?.id || !token) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch all data in parallel
+      const [
+        summaryResponse,
+        pieResponse,
+        lineResponse,
+        barResponse,
+        criticalResponse,
+        topSellingResponse
+      ] = await Promise.all([
+        getSummaryCards(token, currentShop.id),
+        getPieChartData(token, currentShop.id),
+        getLineChartData(token, currentShop.id),
+        getBarChartData(token, currentShop.id),
+        getCriticalProducts(token, currentShop.id),
+        getTopSellingProducts(token, currentShop.id)
+      ]);
+
+      setSummaryData(summaryResponse.data);
+      setPieChartData(pieResponse.data);
+      setLineChartData(lineResponse.data);
+      setBarChartData(barResponse.data);
+      setCriticalProducts(criticalResponse.data);
+      setTopSellingProducts(topSellingResponse.data);
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to fetch analytics data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // If user is not an owner, don't render the content
+  if (user?.role !== "owner") {
+    return null;
+  }
 
   // Define chartConfig here so it's available to components
   const chartConfig = {
     backgroundColor: "transparent",
     backgroundGradientFrom: Colors.light,
     backgroundGradientTo: Colors.light,
-    decimalPlaces: 0, // optional, defaults to 2dp
-    color: (opacity = 1) => `rgba(126, 209, 167, ${opacity})`, // Using accent color
-    labelColor: (opacity = 1) => `rgba(${theme === 'light' ? '27, 40, 33' : '251, 254, 252'}, ${opacity})`, // Text color based on theme
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(126, 209, 167, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(${theme === 'light' ? '27, 40, 33' : '251, 254, 252'}, ${opacity})`,
     style: {
       borderRadius: 16,
     },
@@ -430,24 +534,36 @@ export default function ReportsScreen() {
     propsForLabels: {
       fontFamily: Fonts.publicSans.regular,
     },
-    strokeWidth: 2, // Add strokeWidth here for bolder line
+    strokeWidth: 2,
   };
 
-  // Define a separate chartConfig for smaller charts if needed
   const smallChartConfig = {
-    backgroundColor: "transparent",
-    backgroundGradientFrom: Colors.light,
-    backgroundGradientTo: Colors.light,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(126, 209, 167, ${opacity})`, // Using accent color
-    strokeWidth: 2, // Adjust stroke width for smaller charts
-    propsForDots: { // Adjust or remove dots for smaller charts
-      r: "2", // Smaller dot radius
-      strokeWidth: "1", // Smaller dot border
+    ...chartConfig,
+    propsForDots: {
+      r: "2",
+      strokeWidth: "1",
       stroke: Colors.accent,
     },
-    // labelColor and propsForLabels might not be needed for very small charts without labels
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.errorContainer]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -480,7 +596,7 @@ export default function ReportsScreen() {
           ]}
           onPress={() => setActiveTab('Analytics')}
         >
-           <Text style={[
+          <Text style={[
             styles.toggleButtonText,
             activeTab === 'Analytics'
               ? (theme === 'light' ? styles.activeToggleTextLight : styles.activeToggleTextDark)
@@ -493,13 +609,21 @@ export default function ReportsScreen() {
 
       {activeTab === 'Stock' ? (
         <View>
-          <StockSummaryCards summaryData={summaryCardsData} chartConfig={chartConfig} styles={styles} />
-          <CategoryDistributionChart chartConfig={chartConfig} />
-          <TopItemsByQuantityChart chartConfig={chartConfig} />
-          <StockCriticalProducts criticalProductsData={criticalProductsListData} chartConfig={chartConfig} styles={styles} />
+          <StockSummaryCards summaryData={summaryData} chartConfig={chartConfig} styles={styles} />
+          <CategoryDistributionChart chartConfig={chartConfig} data={pieChartData} />
+          <TopItemsByQuantityChart chartConfig={chartConfig} data={barChartData} />
+          <StockCriticalProducts criticalProductsData={criticalProducts} chartConfig={chartConfig} styles={styles} />
         </View>
       ) : (
-        <AnalyticsContent chartConfig={chartConfig} styles={styles} smallChartConfig={smallChartConfig} />
+        <AnalyticsContent 
+          chartConfig={chartConfig} 
+          styles={styles} 
+          smallChartConfig={smallChartConfig}
+          data={{
+            barChartData,
+            topSellingProducts
+          }}
+        />
       )}
     </ScrollView>
   );
@@ -763,6 +887,44 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.publicSans.regular,
     color: Colors.text,
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: Colors.error,
+    fontFamily: Fonts.publicSans.medium,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: Colors.light,
+    fontFamily: Fonts.publicSans.medium,
+    fontSize: 16,
+  },
+  emptyStateContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    color: Colors.secondary,
+    fontFamily: Fonts.publicSans.medium,
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 

@@ -22,6 +22,7 @@ export default function Header() {
     currentShop,
     switchShop,
     isLoading: isLoadingShops,
+    fetchShops,
   } = useShop();
   const [showShopModal, setShopModal] = useState(false);
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -75,20 +76,22 @@ export default function Header() {
     ]).start(() => callback());
   };
 
-  const handleShowModal = () => {
+  const handleShowModal = async () => {
     if (!showShopModal) {
-      // rotationCount.current += 1; // Managed by rotateInterpolate logic now
+      // Only fetch if we don't have any shops yet
+      if (shops.length === 0) {
+        await fetchShops();
+      }
       setShopModal(true);
       Animated.timing(rotateAnim, {
-        toValue: 1, // Always rotate to "open" state
+        toValue: 1,
         duration: 200,
         useNativeDriver: true,
       }).start();
       animateModalIn();
     } else {
-      // rotationCount.current -= 1; // Managed by rotateInterpolate logic now
       Animated.timing(rotateAnim, {
-        toValue: 0, // Always rotate to "closed" state
+        toValue: 0,
         duration: 200,
         useNativeDriver: true,
       }).start();
@@ -123,34 +126,48 @@ export default function Header() {
         ]}
       >
         <DrawerToggleButton tintColor={Colors.accent} />
-        <TouchableOpacity style={styles.shopToggle} onPress={handleShowModal}>
-          <Text
-            style={[
-              styles.shopLabel,
-              { color: theme === "light" ? Colors.text : Colors.textWhite },
-            ]}
+        {user?.role === "owner" ? (
+          <TouchableOpacity style={styles.shopToggle} onPress={handleShowModal}>
+            <Text
+              style={[
+                styles.shopLabel,
+                { color: theme === "light" ? Colors.text : Colors.textWhite },
+              ]}
+            >
+              {getShopDisplayText()}
+            </Text>
+            <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+              <ChevronDown size={24} color={Colors.accent} />
+            </Animated.View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.employeeShopContainer}>
+            <Text
+              style={[
+                styles.shopLabel,
+                { color: theme === "light" ? Colors.text : Colors.textWhite },
+              ]}
+            >
+              {currentShop?.name || "Shop"}
+            </Text>
+          </View>
+        )}
+        {user?.role === "owner" && (
+          <TouchableOpacity
+            onPress={() => router.push("/(drawer)/notificationPage")}
           >
-            {getShopDisplayText()}
-          </Text>
-          <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-            <ChevronDown size={24} color={Colors.accent} />
-          </Animated.View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => router.push("/(drawer)/notificationPage")}
-        >
-          <Bell size={20} color={Colors.accent} />
-        </TouchableOpacity>
+            <Bell size={20} color={Colors.accent} />
+          </TouchableOpacity>
+        )}
       </View>
-      {showShopModal && (
+      {showShopModal && user?.role === "owner" && (
         <Animated.View
           style={[
             styles.shopModal,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
-              backgroundColor:
-                theme === "light" ? Colors.light : Colors.darkModal, // Adjust background for theme
+              backgroundColor: theme === "light" ? Colors.light : Colors.dark,
             },
           ]}
         >
@@ -237,12 +254,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 14,
   },
-
+  employeeShopContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -24, // Offset by drawer icon width to achieve true center
+  },
   shopLabel: {
     fontSize: 17,
     fontFamily: Fonts.publicSans.semiBold,
   },
-
   shopToggle: {
     flexDirection: "row",
     alignItems: "center",

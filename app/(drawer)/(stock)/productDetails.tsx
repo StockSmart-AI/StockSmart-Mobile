@@ -2,10 +2,12 @@ import { useLocalSearchParams, router } from "expo-router";
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Colors, Fonts } from "@/constants/Theme";
 import { useState, useEffect, useContext } from "react";
-import { getProductById } from "@/api/stock";
+import { getProductById, deleteProduct } from "@/api/stock";
 import { AuthContext } from "@/context/AuthContext";
 import { ArrowLeft } from "lucide-react-native";
 import SkeletonContent from "react-native-skeleton-content";
+import Modal from "@/components/ui/Modal";
+import SnackBar from "@/components/ui/Snackbar";
 
 
 interface Product {
@@ -26,6 +28,9 @@ export default function ProductDetails() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -56,6 +61,32 @@ export default function ProductDetails() {
 
     fetchProductDetails();
   }, [id, token]);
+
+  const handleDelete = async () => {
+    if (!token || !id) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProduct(token, id as string);
+      setNotification({
+        message: 'Product deleted successfully',
+        type: 'success'
+      });
+      setShowDeleteModal(false);
+      // Navigate back to inventory after successful deletion
+      setTimeout(() => {
+        router.replace('/(drawer)/(tabs)/Inventory');
+      }, 1500);
+    } catch (error: any) {
+      console.error('Failed to delete product:', error);
+      setNotification({
+        message: error.response?.data?.error || 'Failed to delete product',
+        type: 'error'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (error) {
     
@@ -143,10 +174,22 @@ export default function ProductDetails() {
               <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
             </View>
             <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity style={styles.restockButton}>
+              <TouchableOpacity 
+                style={styles.restockButton}
+                onPress={() => router.push({
+                  pathname: "/(drawer)/(stock)/restock",
+                  params: { id: product.id }
+                })}
+              >
                 <Text style={styles.restockButtonText}>Restock Item</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.sellButton}>
+              <TouchableOpacity 
+                style={styles.sellButton}
+                onPress={() => router.push({
+                  pathname: "/(drawer)/(stock)/sell",
+                  params: { id: product.id }
+                })}
+              >
                 <Text style={styles.sellButtonText}>Sell Item</Text>
               </TouchableOpacity>
             </View>
@@ -156,10 +199,18 @@ export default function ProductDetails() {
             <TouchableOpacity style={styles.viewMoreButton}>
               <Text style={styles.viewMoreButtonText}>View More</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.updateButton}>
+            <TouchableOpacity style={styles.updateButton}
+              onPress={() => router.push({
+                pathname: "/(drawer)/(stock)/updateProduct",
+                params: { id: product.id }
+              })}
+            >
               <Text style={styles.updateButtonText}>Update Information</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton}>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={() => setShowDeleteModal(true)}
+            >
               <Text style={styles.deleteButtonText}>Delete</Text>
             </TouchableOpacity>
             <Text style={styles.statisticsTitle}>Statistics</Text>
@@ -199,6 +250,24 @@ export default function ProductDetails() {
         </ScrollView>
       ) : (
         <Text style={{ padding: 32 }}>Product not found</Text>
+      )}
+
+      <Modal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete "${product?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        isLoading={isDeleting}
+      />
+
+      {notification && (
+        <SnackBar
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
       )}
     </>
   );

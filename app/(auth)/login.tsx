@@ -11,13 +11,18 @@ import {
 import { useRouter } from "expo-router";
 import { AuthContext } from "@/context/AuthContext";
 import { Colors, Fonts } from "@/constants/Theme";
+import { Eye, EyeOff } from "lucide-react-native";
+import { forgotPassword } from "@/api/auth";
+import { ShopContext } from "@/context/ShopContext";
 
 export default function SignIn() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useContext(AuthContext);
+  const shopContext = useContext(ShopContext);
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -28,13 +33,48 @@ export default function SignIn() {
     try {
       setLoading(true);
       const user = await login(email, password);
-      if (user.isVerified) {
-        router.push("/");
-      } else {
+      
+      if (!user.isVerified) {
         router.push("/(auth)/verification");
+        return;
       }
+
+      // Check if user is an employee and has no shop
+      if (user.role === 'employee' && !user.shop) {
+        router.push("/(auth)/employeeDetails");
+        return;
+      }
+
+      // Default navigation for other cases
+      router.push("/");
     } catch (error: any) {
       Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert("Error", "Please enter your email address");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await forgotPassword(email);
+      Alert.alert(
+        "Success",
+        "If an account with this email exists, a password reset link has been sent.",
+        [{ text: "OK" }]
+      );
+    } catch (error: any) {
+      // Even if there's an error, we show the same message for security
+      Alert.alert(
+        "Success",
+        "If an account with this email exists, a password reset link has been sent.",
+        [{ text: "OK" }]
+      );
     } finally {
       setLoading(false);
     }
@@ -53,14 +93,30 @@ export default function SignIn() {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={true}
-          />
-          <Text style={styles.forgotPasswordText}>Forgot Password</Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff size={24} color={Colors.secondary} strokeWidth={1.5} />
+              ) : (
+                <Eye size={24} color={Colors.secondary} strokeWidth={1.5}/>
+              )}
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+            <Text style={[styles.forgotPasswordText, loading && styles.disabledText]}>
+              Forgot Password
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.container2}>
           <TouchableOpacity
@@ -75,6 +131,7 @@ export default function SignIn() {
           <TouchableOpacity
             style={[styles.btn, styles.createAccountBtn]}
             onPress={() => router.push("/createAccount")}
+            disabled={loading}
           >
             <Text style={[styles.btnText, styles.createAccountBtnText]}>
               Create Account
@@ -148,5 +205,21 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     opacity: 0.7,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    paddingRight: 50, // Make room for the eye icon
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    zIndex: 1,
+  },
+  disabledText: {
+    opacity: 0.5,
   },
 });
